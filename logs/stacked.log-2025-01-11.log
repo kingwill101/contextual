@@ -1,0 +1,2 @@
+[2025-01-11 13:16:46.687] [info] This message is logged to both console and daily file.
+[2025-01-11 13:16:46.703] [error] This error is logged to both console and daily file.

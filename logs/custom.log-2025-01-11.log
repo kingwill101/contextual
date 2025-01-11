@@ -1,0 +1,4 @@
+[38;5;255m2025-01-11 13:30:26.917 [0m[38;5;3m[warning] [0mCustom log channel warning. [38;5;5m| Context: [0m{[38;5;5mapp[0m: MyApp, [38;5;5mversion[0m: 1.2.0} | User: john_doe
+[38;5;255m2025-01-11 13:30:26.917 [0m[38;5;2m[info] [0mUser details updated successfully. [38;5;5m| Context: [0m{[38;5;5mrequestId[0m: abcd1234, [38;5;5moperation[0m: user-update, [38;5;5mapp[0m: MyApp, [38;5;5mversion[0m: 1.2.0} | User: john_doe
+[38;5;255m2025-01-11 18:16:41.317 [0m[38;5;3m[warning] [0mCustom log channel warning. [38;5;5m| Context: [0m{[38;5;5mapp[0m: MyApp, [38;5;5mversion[0m: 1.2.0} | User: john_doe
+[38;5;255m2025-01-11 18:16:41.317 [0m[38;5;2m[info] [0mUser details updated successfully. [38;5;5m| Context: [0m{[38;5;5mrequestId[0m: abcd1234, [38;5;5moperation[0m: user-update, [38;5;5mapp[0m: MyApp, [38;5;5mversion[0m: 1.2.0} | User: john_doe
