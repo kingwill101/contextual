@@ -1,17 +1,14 @@
 [![pub package](https://img.shields.io/pub/v/contextual.svg)](https://pub.dev/packages/contextual)
 [![Build Status](https://github.com/kingwill101/contextual/workflows/dart/badge.svg)](https://github.com/kingwill101/contextual/actions)
 
-
-
-
 # Contextual
 
 A structured logging library for Dart
 
 ![Screenshot](screenshot.png)
 
-
 ## Features
+
 - 🪵 **Multiple Log Levels** - From debug to emergency following RFC 5424
 - 🎨 **Flexible Formatting** - JSON, plain text, and colored output
 - 📊 **Rich Context Support** - Add structured data to your logs
@@ -19,8 +16,7 @@ A structured logging library for Dart
 - 📤 **Multiple Outputs** - Console, files, webhooks, and more
 - 🎯 **Type-specific Formatting** - Custom formatting for your data types
 - ⚡ **Async & Batching** - Efficient log processing
-
-
+- 🔀 **Per-Channel Formatters** - Customize formatting for each channel
 
 ## Installation
 
@@ -30,7 +26,6 @@ Add `contextual` to your `pubspec.yaml`:
 dependencies:
   contextual: ^1.0.0
 ```
-
 
 ## Quick Start
 
@@ -57,103 +52,105 @@ void main() {
     })
   );
 }
-``` 
+```
 
 See the [example](example) folder for detailed examples.
 
-### Configuration
-
+## Configuration
 Load configuration from JSON:
+
 
 ```dart
 final config = LogConfig.fromJson({
   'channels': {
     'console': {
       'driver': 'console',
-      'env': 'development'
+      'env': 'development',
+      'formatter': 'pretty' // Use the pretty formatter for console channel
     },
     'file': {
       'driver': 'daily',
       'path': 'logs/app.log',
       'days': 7,
-      'env': 'production'
+      'env': 'production',
+      'formatter': 'json' // Use the JSON formatter for file channel
     },
     'slack': {
       'driver': 'webhook',
       'webhookUrl': 'https://hooks.slack.com/...',
       'username': 'Logger',
       'emoji': ':warning:',
-      'env': 'production'
+      'env': 'production',
+      'formatter': 'plain' // Use the plain text formatter for Slack channel
     }
   },
   'defaults': {
-    'formatter': 'json'
+    'formatter': 'plain' // Default formatter if none is specified per channel
   }
 });
 
 final logger = Logger(config: config);
+
 ```
 
 If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` formatter.
 
-### Logging Patterns
-
+## Logging Patterns
 Contextual supports two patterns for handling log output:
 
-#### 1. Sink-based Pattern (Default)
+1. Sink-based Pattern (Default)
+    The default pattern uses channels, drivers, and middleware for flexible output handling.
 
-The default pattern uses drivers and middleware for flexible output handling:
+    The logger uses a sink to handle asynchronous logging with options for batching and automatic flushing. You can configure the sink using the `LogSinkConfig` class:
 
+    ```dart
+    final logger = Logger(
+      sinkConfig: LogSinkConfig(
+        batchSize: 50,  // Number of logs to batch before flushing
+        flushInterval: Duration(seconds: 5),  // Time interval for automatic flushing
+        maxRetries: 3,  // Number of retry attempts for failed log operations
+        autoFlush: true  // Enable or disable automatic flushing
+      )
+    );
 
-The logger uses a sink to handle asynchronous logging with options for batching and automatic flushing. You can configure the sink using the `LogSinkConfig` class:
+    // ... your logging code ...
 
-```dart
-final logger = Logger(
-  sinkConfig: LogSinkConfig(
-    batchSize: 50,  // Number of logs to batch before flushing
-    flushInterval: Duration(seconds: 5),  // Time interval for automatic flushing
-    maxRetries: 3,  // Number of retry attempts for failed log operations
-    autoFlush: true  // Enable or disable automatic flushing
-  )
-);
+    // Ensure all logs are delivered before shutting down
+    await logger.shutdown();
+    ```
 
+2. Listener Pattern
 
-```
-Note to ensure all logs are delivered before shutting down the logger. You can use the `shutdown()` method: 
+    For simpler use cases, you can use a listener similar to the logging package:
 
-```dart
-await logger.shutdown();
-```
+    ```dart
+    final logger = Logger();
 
+    // Set up a simple listener
+    logger.setListener((level, message, time) {
+      print('[$time] $level: $message');
+    });
 
-#### 2. Listener Pattern
+    // All logs now go to the listener
+    logger.info('This goes to the listener');
+    ```
 
-For simpler use cases, you can use a listener similar to the logging package:
+    The listener pattern is simpler but doesn't support:
 
-```dart
-final logger = Logger();
-
-// Set up a simple listener
-logger.setListener((level, message, time) {
-  print('[$time] $level: $message');
-});
-
-// All logs now go to the listener
-logger.info('This goes to the listener');
-```
-
-The listener pattern is simpler but doesn't support:
-- Multiple output destinations
-- Driver-specific middleware
-- Asynchronous batching
-
+    - Multiple output destinations
+    - Channel-specific middleware
+    - Asynchronous batching
+  
 Choose the pattern that best fits your needs:
-- Use the sink pattern for production systems needing multiple outputs
-- Use the listener pattern for simple logging during development
 
-### Log Levels
+- Use the sink pattern for production systems needing multiple outputs.
+- Use the listener pattern for simple logging during development.
+
+
+## Log Levels
 
 Supports standard RFC 5424 severity levels:
+
 
 ```dart
 logger.emergency('System is unusable');
@@ -164,37 +161,96 @@ logger.warning('Warning conditions');
 logger.notice('Normal but significant condition');
 logger.info('Informational messages');
 logger.debug('Debug-level messages');
+
 ```
 
+## Formatters
+Choose from built-in formatters or create your own. You can set formatters per channel to customize the output for each logging destination.
 
-### Formatters
+### Setting Formatters Per Channel
 
-Choose from built-in formatters or create your own:
 
 ```dart
-// Pretty printed with colors (great for development)
-logger.formatter(PrettyLogFormatter());
+final logger = Logger()
+  ..environment('development')
+  ..withContext({'app': 'MyApp'})
+  
+  // Console channel with PrettyLogFormatter
+  ..addChannel(
+    'console',
+    ConsoleLogDriver(),
+    formatter: PrettyLogFormatter(),
+  )
+  
+  // File channel with JsonLogFormatter
+  ..addChannel(
+    'file',
+    DailyFileLogDriver('logs/app.log', retentionDays: 7),
+    formatter: JsonLogFormatter(),
+  );
 
-// JSON output (great for production)
-logger.formatter(JsonLogFormatter());
+// Logs sent to 'console' will be pretty-printed
+// Logs sent to 'file' will be in JSON format
+```
 
-// Plain text
+If no formatter is specified for a channel, the logger's default formatter is used.
+
+
+### Using Built-in Formatters
+
+
+```dart
+
+// Set the default formatter for the logger
 logger.formatter(PlainTextLogFormatter());
 
-// without any formatting
-logger.formatter(RawLogFormatter());
+// Choose from the built-in formatters
+logger.formatter(PrettyLogFormatter()); // Colorful, human-readable
+logger.formatter(JsonLogFormatter());    // JSON format
+logger.formatter(RawLogFormatter());     // No formatting
 
-// Custom formatter
-class MyFormatter extends LogMessageFormatter {
+// Set formatter per channel in configuration
+final config = LogConfig.fromJson({
+  'channels': {
+    'console': {
+      'driver': 'console',
+      'formatter': 'pretty'
+    },
+    'file': {
+      'driver': 'daily',
+      'path': 'logs/app.log',
+      'formatter': 'json'
+    }
+  }
+});
+```
+
+### Custom Formatters
+
+Create custom formatters to have full control over log output:
+
+```dart
+class MyCustomFormatter extends LogMessageFormatter {
   @override
   String format(String level, String message, Context context) {
     // Your custom formatting logic
+    return '[Custom] $level: $message';
   }
 }
+
+// Register the custom formatter
+logger.registerFormatter('custom', () => MyCustomFormatter());
+
+// Assign the custom formatter to a channel
+logger.addChannel(
+  'myChannel',
+  ConsoleLogDriver(),
+  formatter: MyCustomFormatter(),
+);
+
 ```
 
 ### Type-specific Formatting
-
 Create custom formatters for your data types:
 
 ```dart
@@ -220,34 +276,39 @@ final user = User('John Doe', 'john@example.com');
 logger.info(user);
 ```
 
-### Output Destinations
 
+
+## Output Destinations
 Configure multiple output destinations:
 
 ```dart
 logger
-  // Console output
-  .addDriver('console', ConsoleLogDriver())
-
-  // Daily rotating file
-  .addDriver('file', DailyFileLogDriver(
-    'logs/app.log',
-    retentionDays: 7
-  ))
-
-  // Webhook (e.g., Slack)
-  .addDriver('slack', WebhookLogDriver(
-    Uri.parse('https://hooks.slack.com/...'),
-    username: 'Logger Bot',
-    emoji: ':robot:'
-  ));
+  // Console output with pretty formatting
+  .addChannel(
+    'console',
+    ConsoleLogDriver(),
+    formatter: PrettyLogFormatter(),
+  )
+  
+  // Daily rotating file with JSON formatting
+  .addChannel(
+    'file',
+    DailyFileLogDriver('logs/app.log', retentionDays: 7),
+    formatter: JsonLogFormatter(),
+  )
+  
+  // Webhook (e.g., Slack) with plain text formatting
+  .addChannel(
+    'slack',
+    WebhookLogDriver(Uri.parse('https://hooks.slack.com/...')),
+    formatter: PlainTextLogFormatter(),
+  );
 
 // Log to specific destinations
 logger.to(['console', 'file']).info('This goes to console and file');
 ```
 
-### Context
-
+## Context
 Add structured data to your logs:
 
 ```dart
@@ -267,11 +328,11 @@ logger.info(
 );
 ```
 
-
-### Middleware
+## Middleware
 
 Transform or filter logs:
-```dart
+
+  ```dart
 // Add sensitive data filter
 logger.addLogMiddleware(SensitiveDataMiddleware());
 
@@ -280,17 +341,15 @@ logger.addMiddleware(() => {
   'requestId': generateRequestId()
 });
 
-// Driver-specific middleware
-logger.addDriverMiddleware(
+// Channel-specific middleware
+logger.addChannelMiddleware(
   'slack',
   ErrorOnlyMiddleware()
 );
 ```
 
 ## Advanced Usage
-
 ### Batch Processing
-
 Configure batching behavior:
 
 ```dart
@@ -305,7 +364,6 @@ final logger = Logger(
 ```
 
 ### Custom Drivers
-
 Implement your own log destinations:
 
 ```dart
@@ -318,116 +376,117 @@ class CustomLogDriver implements LogDriver {
 ```
 
 ## Channels
-
 Channels are named logging destinations that can be configured independently. Each channel represents a different way to handle log messages:
 
 ```dart
-// Configure multiple channels
+// Configure multiple channels with per-channel formatters
 final logger = Logger(
   config: LogConfig.fromJson({
     'channels': {
-      // Console output for development
+      // Console output for development with pretty formatting
       'console': {
         'driver': 'console',
-        'env': 'development'
+        'env': 'development',
+        'formatter': 'pretty'
       },
-      // Daily rotating file for production logs
+      // Daily rotating file for production logs with JSON formatting
       'daily': {
         'driver': 'daily',
         'path': 'logs/app.log',
         'days': 7,
-        'env': 'production'
+        'env': 'production',
+        'formatter': 'json'
       },
-      // Emergency channel that combines multiple drivers
-      'emergency': {
-        'driver': 'stack',
-        'channels': ['slack', 'daily'],
-        'env': 'all'
-      },
-      // Slack notifications for critical issues
+      // Slack notifications for critical issues with plain text formatting
       'slack': {
         'driver': 'webhook',
         'webhookUrl': 'https://hooks.slack.com/...',
         'username': 'Emergency Bot',
         'emoji': ':rotating_light:',
-        'env': 'production'
+        'env': 'production',
+        'formatter': 'plain'
       }
     }
   })
 );
-
 // Log to specific channels
 logger.to(['console', 'daily']).info('Regular log message');
-logger.to(['emergency']).critical('Critical system failure!');
+logger.to(['slack']).critical('Critical system failure!');
 
 // Default behavior logs to all channels for the current environment
 logger.error('This goes to all active channels');
 ```
 
-### Environment-based Channel Selection
-
-Channels can be configured to only be active in specific environments:
+## Environment-based Channel Selection
+Channels can be configured to be active only in specific environments:
 
 ```dart
 final logger = Logger(environment: 'production')
-  ..addDriver('console', ConsoleLogDriver()) // No env specified, always active
-  ..addDriver('daily', DailyFileLogDriver('logs/app.log')) // Production only
-  ..addDriver('debug', ConsoleLogDriver()); // Development only
+  ..addChannel(
+    'console',
+    ConsoleLogDriver(),
+    formatter: PrettyLogFormatter(),
+  ) // No env specified, always active
+  ..addChannel(
+    'daily',
+    DailyFileLogDriver('logs/app.log'),
+    formatter: JsonLogFormatter(),
+  ) // Production only
+  ..addChannel(
+    'debug',
+    ConsoleLogDriver(),
+    formatter: PrettyLogFormatter(),
+  ); // Development only
 
 // In production: logs to 'console' and 'daily'
 // In development: logs to 'console' and 'debug'
-
 ```
 
-### Stack Channels
-
+## Stack Channels
 Stack channels allow you to create a single channel that forwards logs to multiple other channels. This is useful when you want to send the same logs to multiple destinations with different formatting and filtering:
 
 ```dart
 final config = LogConfig.fromJson({
   'channels': {
-    // Individual channels
+    // Individual channels with their own formatters
     'file': {
       'driver': 'daily',
-      'path': 'logs/app.log'
+      'path': 'logs/app.log',
+      'formatter': 'json'
     },
     'slack': {
       'driver': 'webhook',
-      'webhookUrl': 'https://hooks.slack.com/...'
+      'webhookUrl': 'https://hooks.slack.com/...',
+      'formatter': 'plain'
     },
 
     // Stack channel that combines both
     'production': {
       'driver': 'stack',
       'channels': ['file', 'slack'], // Will forward to both channels
-      'ignore_exceptions': true
+      'ignoreExceptions': true
     }
   }
 });
 
 // Now you can log to both channels with one call
 logger.to(['production']).error('Critical failure');
-
-// Add different formatting for each destination
-logger.addDriverMiddleware('file', new JsonFormatter());
-logger.addDriverMiddleware('slack', new PrettyFormatter());
 ```
 
 Stack channels are particularly useful for:
+
 - Sending critical logs to multiple destinations
 - Applying different formatting per destination
 - Creating backup logging channels
 - Setting up monitoring and notification systems
 
-Each channel in a stack maintains its own middleware chain, allowing for independent processing of logs for each destination.
+Each channel in a stack maintains its own middleware chain and formatter, allowing for independent processing of logs for each destination.
 
 ## Understanding Middleware
-
 Contextual uses a two-stage middleware system to provide flexible log processing:
 
 ### Context Middleware
-
-Context middleware runs first and can add/modify the context data before any formatting happens:
+Context middleware runs first and can add or modify the context data before any formatting happens:
 
 ```dart
 // Add request ID and timestamp to all logs
@@ -448,31 +507,35 @@ logger.addMiddleware(() {
 logger.info('User action'); // Includes requestId, timestamp, and userId
 ```
 
-### Driver Middleware
-
-Driver middleware processes log entries before they reach specific log drivers. Each driver in a channel can have its own middleware chain:
+### Driver and Channel Middleware
+Driver middleware processes log entries before they reach specific drivers. Channel middleware works similarly but is associated with channels.
 
 ```dart
 // Filter sensitive data from all logs
 class SensitiveDataMiddleware implements DriverMiddleware {
   @override
-  DriverMiddlewareResult handle(String driverName, MapEntry<String, String> entry) {
-    // driverName indicates which driver is receiving the log entry
+  Future<MapEntry<String, String>?> handle(
+    MapEntry<String, String> entry,
+    String driverName,
+  ) async {
     var message = entry.value;
     message = message.replaceAll(RegExp(r'password=[\w\d]+'), 'password=***');
-    return DriverMiddlewareResult.modify(MapEntry(entry.key, message));
+    return MapEntry(entry.key, message);
   }
 }
 
 // Only allow errors to reach certain drivers
 class ErrorOnlyMiddleware implements DriverMiddleware {
   @override
-  DriverMiddlewareResult handle(String driverName, MapEntry<String, String> entry) {
+  Future<MapEntry<String, String>?> handle(
+    MapEntry<String, String> entry,
+    String driverName,
+  ) async {
     final errorLevels = ['emergency', 'alert', 'critical', 'error'];
     if (!errorLevels.contains(entry.key.toLowerCase())) {
-      return DriverMiddlewareResult.stop();
+      return null; // Stop processing this log entry
     }
-    return DriverMiddlewareResult.proceed();
+    return entry;
   }
 }
 
@@ -480,30 +543,26 @@ class ErrorOnlyMiddleware implements DriverMiddleware {
 logger
   // Global middleware applied to all drivers
   .addLogMiddleware(SensitiveDataMiddleware())
-  // Driver-specific middleware only applied to webhook driver
-  .addDriverMiddleware('webhook', ErrorOnlyMiddleware());
+  // Channel-specific middleware only applied to the 'slack' channel
+  .addChannelMiddleware('slack', ErrorOnlyMiddleware());
 
 // Middleware execution flow:
 // 1. Context middleware runs first
 // 2. Log is formatted
 // 3. Global driver middlewares process the log
-// 4. Driver-specific middlewares process the log
+// 4. Channel-specific middlewares process the log
 // 5. Log is sent to the driver
-
 ```
 
 ## Asynchronous Logging and Shutdown
-
 The logger uses asynchronous processing and batching to improve performance. This means you must properly shut down the logger to ensure all logs are delivered:
-
-When using asynchronous drivers (like WebhookLogDriver) or batch processing, it's important to properly shut down the logger to ensure all logs are delivered:
 
 ```dart
 void main() async {
   final logger = Logger(
     sinkConfig: LogSinkConfig(
       batchSize: 50, // Buffer up to 50 logs
-      flushInterval: Duration(seconds: 5) // Or flush every 5 seconds
+      flushInterval: Duration(seconds: 5), // Or flush every 5 seconds
     )
   );
 
@@ -531,17 +590,22 @@ class MyApp {
 ```
 
 The `shutdown()` method:
+
 - Flushes any buffered log messages
 - Waits for all async log operations to complete
 - Ensures webhook requests are sent
 - Closes file handles and other resources
 
-Always call `shutdown()` before your application exits to prevent log message loss.
+Always call `shutdown() `before your application exits to prevent log message loss.
 
+
+## Conclusion
+
+Contextual provides a flexible and powerful logging solution for Dart applications. By allowing per-channel formatters, you can customize the output of each logging destination to suit your needs. Whether you're developing a simple application or a complex system with multiple output channels, Contextual offers the tools you need to implement efficient and informative logging.
 
 ## Contributing
 
-Contributions are welcome!  Just open an issue or pull request on GitHub.
+Contributions are welcome! Feel free to open an issue or submit a pull request on [GitHub](https://github.com/kingwill101/contextual).
 
 ## License
 
