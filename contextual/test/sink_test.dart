@@ -1,3 +1,4 @@
+import 'package:contextual/src/log_level.dart';
 import 'package:test/test.dart';
 import 'package:contextual/src/sink.dart';
 
@@ -7,13 +8,13 @@ void main() {
       final sink = LogSink(batchSize: 2);
       int logCount = 0;
 
-      await sink.addLog('INFO', () async {
+      await sink.addLog(Level.info, () async {
         logCount++;
       });
 
       expect(logCount, equals(0)); // Not flushed yet
 
-      await sink.addLog('INFO', () async {
+      await sink.addLog(Level.info, () async {
         logCount++;
       });
 
@@ -24,7 +25,7 @@ void main() {
       final sink = LogSink(autoFlushInterval: Duration(milliseconds: 100));
       int logCount = 0;
 
-      await sink.addLog('INFO', () async {
+      await sink.addLog(Level.info, () async {
         logCount++;
       });
 

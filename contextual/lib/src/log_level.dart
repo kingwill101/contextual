@@ -11,20 +11,22 @@
 /// - [debug]: Indicates a debug-level message.
 ///
 /// The [contains] method can be used to check if a given log level string is valid.
-enum LogLevel {
-  emergency('emergency'),
-  alert('alert'),
-  critical('critical'),
-  error('error'),
-  warning('warning'),
-  notice('notice'),
-  info('info'),
-  debug('debug');
+enum Level {
+  emergency,
+  alert,
+  critical,
+  error,
+  warning,
+  notice,
+  info,
+  debug;
 
-  final String value;
-  const LogLevel(this.value);
+  @override
+  String toString() {
+    return toUpperCase();
+  }
 
-  static const List<LogLevel> levels = [
+  static const List<Level> levels = [
     emergency,
     alert,
     critical,
@@ -34,8 +36,18 @@ enum LogLevel {
     info,
     debug
   ];
+}
 
-  static bool contains(String level) {
-    return levels.any((logLevel) => logLevel.value == level);
+extension LevelExtension on Level {
+  bool operator <(Level other) {
+    return Level.levels.indexOf(this) < Level.levels.indexOf(other);
+  }
+
+  String toUpperCase() {
+    return name.toUpperCase();
+  }
+
+  String toLowerCase() {
+    return name.toLowerCase();
   }
 }

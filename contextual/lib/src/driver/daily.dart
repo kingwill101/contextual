@@ -1,18 +1,19 @@
-import 'package:universal_io/io.dart';
 import 'package:contextual/src/driver/driver.dart';
+import 'package:universal_io/io.dart';
 
 /// A [LogDriver] that writes log messages to a daily log file.
-/// 
+///
 /// - [baseFilePath]: The base file path (e.g., 'logs/app') to which the
 ///    date suffix will be appended. The final file would look like
 ///    "logs/app-2025-01-15.log" for logs created on January 15, 2025.
 /// - [retentionDays]: The number of days to keep log files. Older files
 ///    are automatically deleted during log operations.
-class DailyFileLogDriver implements LogDriver {
+class DailyFileLogDriver extends LogDriver {
   final String baseFilePath;
   final int retentionDays;
 
-  DailyFileLogDriver(this.baseFilePath, {this.retentionDays = 14}) {
+  DailyFileLogDriver(this.baseFilePath, {this.retentionDays = 14})
+      : super("file") {
     // Optional: Initial cleanup on driver creation
     _cleanupOldFiles();
   }
@@ -44,7 +45,9 @@ class DailyFileLogDriver implements LogDriver {
   /// and deletes those older than the retention period.
   void _cleanupOldFiles() {
     final logDir = File(baseFilePath).parent;
-    if (!logDir.existsSync()) return; // If the directory doesn't exist, nothing to do.
+    if (!logDir.existsSync()) {
+      return; // If the directory doesn't exist, nothing to do.
+    }
 
     final now = DateTime.now();
     final files = logDir.listSync().whereType<File>();

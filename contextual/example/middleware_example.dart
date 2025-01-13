@@ -1,9 +1,9 @@
 import 'package:contextual/contextual.dart';
+import 'package:contextual/src/types.dart';
 
 class UppercaseMiddleware extends DriverMiddleware {
   @override
-  DriverMiddlewareResult handle(
-      String driverName, MapEntry<String, String> entry) {
+  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
     final modifiedMessage = entry.value.toUpperCase();
     return DriverMiddlewareResult.modify(MapEntry(entry.key, modifiedMessage));
   }
@@ -11,7 +11,7 @@ class UppercaseMiddleware extends DriverMiddleware {
 
 void main() async {
   final logger = Logger()
-    ..addDriver('console', ConsoleLogDriver())
+    ..addChannel('console', ConsoleLogDriver())
     ..addLogMiddleware(UppercaseMiddleware());
 
   logger.info('This message will be converted to uppercase.');

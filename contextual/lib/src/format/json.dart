@@ -1,8 +1,10 @@
 import 'dart:convert';
 
-import '../context.dart';
+import 'package:contextual/src/log_level.dart';
+
+import 'package:contextual/src/context.dart';
+import 'package:contextual/src/util.dart';
 import 'message_formatter.dart';
-import '../util.dart';
 
 /// Formats log messages as JSON.
 class JsonLogFormatter extends LogMessageFormatter {
@@ -15,7 +17,7 @@ class JsonLogFormatter extends LogMessageFormatter {
   final bool prettyPrint;
 
   @override
-  String format(String level, String message, Context context) {
+  String format(Level level, String message, Context context) {
     final contextData =
         settings.includeHidden ? context.all() : context.visible();
     final logEntry = <String, dynamic>{};

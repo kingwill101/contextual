@@ -1,4 +1,4 @@
-import 'context.dart';
+import 'package:contextual/contextual.dart';
 
 /// An abstract interface for a logger that provides methods for logging messages
 /// at different severity levels.
@@ -48,5 +48,5 @@ abstract class LoggerInterface {
   /// [level] The log level to use
   /// [message] The message to log
   /// [context] Optional context information
-  void log(String level, Object message, [Context context]);
+  void log(Level level, Object message, [Context context]);
 }

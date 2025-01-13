@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:contextual/contextual.dart';
+import 'package:contextual/src/types.dart';
 
 /// Middleware that blocks sensitive logs containing passwords
 class BlockSensitiveLogsMiddleware implements DriverMiddleware {
   @override
-  DriverMiddlewareResult handle(
-      String driverName, MapEntry<String, String> entry) {
+  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
     if (entry.value.contains('password')) {
       print('[Middleware] Sensitive log detected. Blocking log.');
       return DriverMiddlewareResult.stop(); // Block the log entirely
@@ -22,8 +22,7 @@ class AddTagMiddleware implements DriverMiddleware {
   AddTagMiddleware(this.tag);
 
   @override
-  DriverMiddlewareResult handle(
-      String driverName, MapEntry<String, String> entry) {
+  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
     final modifiedMessage = '${entry.value} [$tag for $driverName]';
     return DriverMiddlewareResult.modify(MapEntry(entry.key, modifiedMessage));
   }
@@ -36,8 +35,7 @@ class AddUserMiddleware implements DriverMiddleware {
   AddUserMiddleware(this.username);
 
   @override
-  DriverMiddlewareResult handle(
-      String driverName, MapEntry<String, String> entry) {
+  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
     final enrichedMessage = '${entry.value} | User: $username';
     return DriverMiddlewareResult.modify(MapEntry(entry.key, enrichedMessage));
   }
@@ -46,7 +44,7 @@ class AddUserMiddleware implements DriverMiddleware {
 /// Formatter for structured data (JSON-style)
 class StructuredMapFormatter extends LogTypeFormatter<Map<String, dynamic>> {
   @override
-  String format(String level, Map<String, dynamic> message, Context context) {
+  String format(Level level, Map<String, dynamic> message, Context context) {
     final logData = {
       'level': level.toUpperCase(),
       'data': message,
@@ -60,7 +58,7 @@ class StructuredMapFormatter extends LogTypeFormatter<Map<String, dynamic>> {
 /// Formatter for exceptions
 class ExceptionLogFormatter extends LogTypeFormatter<Exception> {
   @override
-  String format(String level, Exception exception, Context context) {
+  String format(Level level, Exception exception, Context context) {
     return '[${level.toUpperCase()}] Exception: ${exception.toString()} at ${DateTime.now()} | Context: ${context.all()}';
   }
 }
@@ -140,6 +138,6 @@ void main() async {
   logManager.to(['console', 'webhook']).alert('System is under heavy load.');
 
   // Shutdown to flush logs
-  // await logManager.shutdown();
+  await logManager.shutdown();
   print("something");
 }

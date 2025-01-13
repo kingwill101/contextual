@@ -1,0 +1,15 @@
+name: contextual_shelf
+description: logging shelf using contextual logger
+version: "0.1.0"
+resolution: workspace
+
+homepage: https://github.com/kingwill101/contextual
+
+issue_tracker: https://github.com/kingwill101/contextual/issues
+
+environment: 
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  contextual: ^1.0.0
+  shelf: ^1.4.2

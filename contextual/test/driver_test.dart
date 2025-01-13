@@ -1,7 +1,7 @@
 import 'package:contextual/src/driver/driver.dart';
 import 'package:contextual/src/driver/stack.dart';
-import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:test/test.dart';
 
 class MockLogDriver extends Mock implements TestDriver {}
 
@@ -90,8 +90,10 @@ void main() {
   });
 }
 
-class TestDriver implements LogDriver {
+class TestDriver extends LogDriver {
   final List<String> logMessages = [];
+
+  TestDriver() : super("test");
 
   @override
   Future<void> log(String formattedMessage) async {

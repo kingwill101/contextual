@@ -1,14 +1,15 @@
 import 'dart:convert';
 
-import 'driver.dart';
 import 'package:universal_io/io.dart';
+
+import 'driver.dart';
 
 /// A log driver that sends log messages to a webhook endpoint.
 ///
 /// The [WebhookLogDriver] is an implementation of the [LogDriver] interface that sends
 /// log messages to a specified webhook endpoint. It supports optional username and
 /// emoji customization for the log messages.
-class WebhookLogDriver implements LogDriver {
+class WebhookLogDriver extends LogDriver {
   final Uri endpoint;
   final String? username;
   final String? emoji;
@@ -18,7 +19,8 @@ class WebhookLogDriver implements LogDriver {
   /// The [endpoint] parameter is a required [Uri] that specifies the webhook endpoint to send log messages to.
   /// The [username] parameter is an optional [String] that specifies the username to include in the log message.
   /// The [emoji] parameter is an optional [String] that specifies the emoji to include in the log message.
-  WebhookLogDriver(this.endpoint, {this.username, this.emoji});
+  WebhookLogDriver(this.endpoint, {this.username, this.emoji})
+      : super("webhook");
 
   @override
   Future<void> log(String formattedMessage) async {

@@ -26,6 +26,7 @@ class LogConfig {
       defaults: json['defaults'] ?? {},
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
       'channels': channels.map((key, value) => MapEntry(key, value.toJson())),
@@ -48,6 +49,7 @@ class ChannelConfig {
   final Uri? webhookUrl;
   final String? username;
   final String? emoji;
+  final String? formatter;
 
   ChannelConfig({
     required this.driver,
@@ -59,6 +61,7 @@ class ChannelConfig {
     this.webhookUrl,
     this.username,
     this.emoji,
+    this.formatter,
   });
 
   /// Constructs a [ChannelConfig] instance from a JSON map.
@@ -78,6 +81,7 @@ class ChannelConfig {
           json['webhookUrl'] != null ? Uri.parse(json['webhookUrl']) : null,
       username: json['username'],
       emoji: json['emoji'],
+      formatter: json['formatter'],
     );
   }
 
@@ -92,6 +96,7 @@ class ChannelConfig {
       if (webhookUrl != null) 'webhookUrl': webhookUrl.toString(),
       if (username != null) 'username': username,
       if (emoji != null) 'emoji': emoji,
+      if (formatter != null) 'formatter': formatter,
     };
   }
 }

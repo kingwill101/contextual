@@ -1,9 +1,16 @@
+import 'package:contextual/src/types.dart';
+
 /// Defines an interface for a log driver that can be used to log messages.
 ///
 /// Implementations of this interface are responsible for handling the actual
 /// logging of messages, such as writing them to a file, sending them to a
 /// remote logging service, or displaying them in the console.
 abstract class LogDriver {
+  final String name;
+
+  LogDriver(this.name);
+
+  /// Logs the provided [formattedMessage] using the driver's implementation
   Future<void> log(String formattedMessage);
 }
 
@@ -26,8 +33,7 @@ class LogDriverFactory {
   ///
   /// This method allows the logging system to be extended with new log driver
   /// implementations without modifying the core logging logic.
-  void registerDriver(
-      String type, LogDriver Function(Map<String, dynamic>) builder) {
+  void registerDriver(String type, LogDriverBuilder builder) {
     _registeredDrivers[type] = builder;
   }
 

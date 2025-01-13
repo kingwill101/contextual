@@ -3,6 +3,7 @@ import 'package:contextual/contextual.dart';
 void main() async {
   final logger = Logger(formatter: PrettyLogFormatter());
 
+  logger.withContext({"app": "pretty test"});
   logger.info('This is an informational message in pretty text format.');
   logger.error('This is an error message in pretty text format.');
   logger.debug('This is a debug message in pretty text format.');

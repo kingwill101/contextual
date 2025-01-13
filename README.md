@@ -93,7 +93,12 @@ final logger = Logger(config: config);
 
 ```
 
-If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` formatter.
+If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` formatter. To disable the the `default` console logger, at initialization, set the `defaultChannelEnabled` value to `false` in the constructor of your `Logger` instance.
+
+```dart
+final logger = Logger(
+  defaultChannelEnabled: false,);
+```
 
 ## Logging Patterns
 Contextual supports two patterns for handling log output:
@@ -232,7 +237,7 @@ Create custom formatters to have full control over log output:
 ```dart
 class MyCustomFormatter extends LogMessageFormatter {
   @override
-  String format(String level, String message, Context context) {
+  String format(LogLevel level, String message, Context context) {
     // Your custom formatting logic
     return '[Custom] $level: $message';
   }
@@ -263,7 +268,7 @@ class User {
 
 class UserFormatter extends LogTypeFormatter<User> {
   @override
-  String format(String level, User user, Context context) {
+  String format(LogLevel level, User user, Context context) {
     return '{"name": "${user.name}", "email": "${user.email}"}';
   }
 }
@@ -342,7 +347,7 @@ logger.addMiddleware(() => {
 });
 
 // Channel-specific middleware
-logger.addChannelMiddleware(
+logger.addDriverMiddleware(
   'slack',
   ErrorOnlyMiddleware()
 );
@@ -544,7 +549,7 @@ logger
   // Global middleware applied to all drivers
   .addLogMiddleware(SensitiveDataMiddleware())
   // Channel-specific middleware only applied to the 'slack' channel
-  .addChannelMiddleware('slack', ErrorOnlyMiddleware());
+  .addDriverMiddleware('slack', ErrorOnlyMiddleware());
 
 // Middleware execution flow:
 // 1. Context middleware runs first

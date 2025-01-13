@@ -1,34 +1,35 @@
+import 'package:ansicolor/ansicolor.dart';
+import 'package:contextual/src/log_level.dart';
+
 import '../context.dart';
 import 'message_formatter.dart';
-import 'package:ansicolor/ansicolor.dart';
 
 /// A formatter that outputs log messages in a colored, human-readable format.
 class PrettyLogFormatter extends LogMessageFormatter {
   PrettyLogFormatter({super.settings});
 
   @override
-  String format(String level, String message, Context context) {
+  String format(Level level, String message, Context context) {
     // Define ANSI color pens for different log levels
     AnsiPen levelPen;
-    switch (level.toLowerCase()) {
-      case 'debug':
+    switch (level) {
+      case Level.debug:
         levelPen = AnsiPen()..blue();
         break;
-      case 'info':
+      case Level.info:
         levelPen = AnsiPen()..green();
         break;
-      case 'notice':
+      case Level.notice:
         levelPen = AnsiPen()..cyan();
         break;
-      case 'warning':
+      case Level.warning:
         levelPen = AnsiPen()..yellow();
         break;
-      case 'error':
+      case Level.error:
         levelPen = AnsiPen()..red();
         break;
-      case 'critical':
-      case 'alert':
-      case 'emergency':
+      case Level.alert:
+      case Level.emergency:
         levelPen = AnsiPen()..red(bold: true);
         break;
       default:

@@ -1,5 +1,6 @@
-import '../context.dart';
-import 'formatter_settings.dart';
+import 'package:contextual/src/context.dart';
+import 'package:contextual/src/format/formatter_settings.dart';
+import 'package:contextual/src/log_level.dart';
 
 /// Defines the interface for formatting log messages.
 ///
@@ -16,5 +17,5 @@ abstract class LogMessageFormatter {
   LogMessageFormatter({FormatterSettings? settings})
       : settings = settings ?? FormatterSettings();
 
-  String format(String level, String message, Context context);
+  String format(Level level, String message, Context context);
 }

@@ -1,6 +1,6 @@
-import 'driver.dart';
-import '../middleware.dart';
-import '../middleware_processor.dart';
+import 'package:contextual/contextual.dart';
+
+import 'package:contextual/src/middleware_processor.dart';
 
 /// A driver that combines multiple channels into a single logging destination.
 ///
@@ -36,15 +36,19 @@ import '../middleware_processor.dart';
 /// channel, allowing fine-grained control over how logs are processed for each
 /// destination.
 
-class StackLogDriver implements LogDriver {
+class StackLogDriver extends LogDriver {
   final List<LogDriver> _drivers;
   final bool ignoreExceptions;
-  Map<String, List<DriverMiddleware>> _middlewares = {};
+  Map<String, List<DriverMiddleware>> _driverMiddlewares = {};
+  Map<String, List<DriverMiddleware>> _channelMiddlewares = {};
 
-  StackLogDriver(this._drivers, {this.ignoreExceptions = false});
+  StackLogDriver(this._drivers, {this.ignoreExceptions = false})
+      : super("stack");
 
-  void setMiddlewares(Map<String, List<DriverMiddleware>> middlewares) {
-    _middlewares = middlewares;
+  void setMiddlewares(Map<String, List<DriverMiddleware>> driverMiddlewares,
+      Map<String, List<DriverMiddleware>> channelMiddlewares) {
+    _driverMiddlewares = driverMiddlewares;
+    _channelMiddlewares = channelMiddlewares;
   }
 
   @override
@@ -54,11 +58,17 @@ class StackLogDriver implements LogDriver {
     for (var driver in _drivers) {
       try {
         final driverName = driver.runtimeType.toString();
+
+        // Gather middlewares for this driver
+        final channelMiddlewares = _channelMiddlewares[driverName] ?? [];
+        final driverMiddlewares = _driverMiddlewares[driverName] ?? [];
+
         var driverLogEntry = await processDriverMiddlewares(
-          logEntry: MapEntry('', formattedMessage),
+          logEntry: MapEntry(Level.info, formattedMessage),
           driverName: driverName,
-          globalMiddlewares: [], // No global middlewares in this context
-          driverMiddlewaresMap: _middlewares,
+          globalMiddlewares: [],
+          channelMiddlewares: channelMiddlewares,
+          driverMiddlewares: driverMiddlewares,
         );
 
         if (driverLogEntry == null) continue;

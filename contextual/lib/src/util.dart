@@ -1,3 +1,5 @@
+import 'package:contextual/src/log_level.dart';
+
 import 'context.dart';
 import 'format/message_formatter.dart';
 import 'format/plain.dart';
@@ -40,7 +42,7 @@ String interpolateMessage(String message, Context context) {
 /// formatter will be used. Otherwise, falls back to the default [formatter].
 ///
 /// Returns the formatted log message as a string.
-String formatMessage(String level, Object message, Context context,
+String formatMessage(Level level, Object message, Context context,
     {LogMessageFormatter? formatter,
     Map<Type, LogTypeFormatter> typeFormatters = const {}}) {
   formatter ??= PlainTextLogFormatter();

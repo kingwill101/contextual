@@ -14,7 +14,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Emergency-level messages indicate a critical system failure or other severe issue that requires immediate attention.
   void emergency(Object message, [Context? context]) {
-    log(LogLevel.emergency.value, message, context ?? Context());
+    log(Level.emergency, message, context ?? Context());
   }
 
   @override
@@ -23,7 +23,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Alert-level messages indicate a serious issue that requires immediate attention, but may not be as critical as an emergency.
   void alert(Object message, [Context? context]) {
-    log(LogLevel.alert.value, message, context ?? Context());
+    log(Level.alert, message, context ?? Context());
   }
 
   @override
@@ -32,7 +32,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Critical-level messages indicate a serious issue that requires immediate attention, but may not be as severe as an emergency.
   void critical(Object message, [Context? context]) {
-    log(LogLevel.critical.value, message, context ?? Context());
+    log(Level.critical, message, context ?? Context());
   }
 
   @override
@@ -41,7 +41,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Error-level messages indicate a problem that requires attention, but may not be as severe as an alert or emergency.
   void error(Object message, [Context? context]) {
-    log(LogLevel.error.value, message, context ?? Context());
+    log(Level.error, message, context ?? Context());
   }
 
   @override
@@ -50,7 +50,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Warning-level messages indicate a potential issue or problem that may require attention, but is not as severe as an error.
   void warning(Object message, [Context? context]) {
-    log(LogLevel.warning.value, message, context ?? Context());
+    log(Level.warning, message, context ?? Context());
   }
 
   @override
@@ -59,7 +59,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Notice-level messages indicate a normal, but significant, event or condition that may require attention.
   void notice(Object message, [Context? context]) {
-    log(LogLevel.notice.value, message, context ?? Context());
+    log(Level.notice, message, context ?? Context());
   }
 
   @override
@@ -68,7 +68,7 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Informational-level messages provide general information about the system's operation, but do not indicate any issues or errors.
   void info(Object message, [Context? context]) {
-    log(LogLevel.info.value, message, context ?? Context());
+    log(Level.info, message, context ?? Context());
   }
 
   @override
@@ -77,6 +77,6 @@ abstract class AbstractLogger implements LoggerInterface {
   ///
   /// Debug-level messages are used for detailed diagnostic information that is typically only useful during development or troubleshooting.
   void debug(Object message, [Context? context]) {
-    log(LogLevel.debug.value, message, context ?? Context());
+    log(Level.debug, message, context ?? Context());
   }
 }

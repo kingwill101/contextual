@@ -5,7 +5,7 @@ void main() {
   group('Logger with Listener', () {
     test('should use listener and bypass sink', () {
       final logger = Logger(formatter: RawLogFormatter());
-      String? receivedLevel;
+      Level? receivedLevel;
       String? receivedMessage;
       DateTime? receivedTime;
 
@@ -17,7 +17,7 @@ void main() {
 
       logger.info('Test message');
 
-      expect(receivedLevel, equals('info'));
+      expect(receivedLevel, equals(Level.info));
       expect(receivedMessage, equals('Test message'));
       expect(receivedTime, isNotNull);
     });

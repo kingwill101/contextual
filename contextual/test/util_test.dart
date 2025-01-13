@@ -1,3 +1,4 @@
+import 'package:contextual/src/log_level.dart';
 import 'package:test/test.dart';
 import 'package:contextual/src/util.dart';
 import 'package:contextual/src/context.dart';
@@ -51,7 +52,7 @@ void main() {
       final message = CustomMessage('test');
 
       final result = formatMessage(
-        'INFO',
+        Level.info,
         message,
         context,
         typeFormatters: {CustomMessage: customFormatter},
@@ -71,14 +72,14 @@ void main() {
         ),
       );
       final result =
-          formatMessage('INFO', message, context, formatter: formatter);
+          formatMessage(Level.info, message, context, formatter: formatter);
       expect(result, equals('[INFO] test message'));
     });
 
     test('handles non-string objects using toString()', () {
       final message = CustomMessage('CUSTOM VALUE');
       final formatter = CustomTypeFormatter();
-      final result = formatMessage('INFO', message, context,
+      final result = formatMessage(Level.info, message, context,
           typeFormatters: {CustomMessage: formatter});
       expect(result, equals("CUSTOM: CUSTOM VALUE"));
     });
@@ -92,7 +93,7 @@ class CustomMessage {
 
 class CustomTypeFormatter extends LogTypeFormatter {
   @override
-  String format(String level, dynamic message, Context context) {
+  String format(Level level, dynamic message, Context context) {
     return 'CUSTOM: ${(message as CustomMessage).value}';
   }
 }

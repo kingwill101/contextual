@@ -1,3 +1,5 @@
+import 'package:contextual/src/log_level.dart';
+
 import '../context.dart';
 import '../logtype_formatter.dart';
 
@@ -34,16 +36,16 @@ class MapFormatter extends LogTypeFormatter<Map> {
   /// - [valueFormatters]: Formatters to use for specific value types
   /// - [formatKeys]: Whether to apply formatters to keys (defaults to false)
   /// - [sorted]: Whether to sort entries by key (defaults to true)
-  MapFormatter({
+  const MapFormatter({
     Map<Type, LogTypeFormatter>? valueFormatters,
     bool formatKeys = false,
     bool sorted = true,
-  })  : _valueFormatters = valueFormatters ?? {},
+  })  : _valueFormatters = valueFormatters ?? const {},
         _formatKeys = formatKeys,
         _sorted = sorted;
 
   @override
-  String format(String level, Map message, Context context) {
+  String format(Level level, Map message, Context context) {
     final buffer = StringBuffer();
     buffer.write('{');
 
@@ -65,7 +67,7 @@ class MapFormatter extends LogTypeFormatter<Map> {
       // Format the value using type-specific formatter if available
       final value = _formatValue(level, entry.value, context);
 
-      buffer.write('$key: $value');
+      buffer.write('"$key": ${entry.value is Map ? "\"$value\"" : value}');
     }
 
     buffer.write('}');
@@ -73,7 +75,7 @@ class MapFormatter extends LogTypeFormatter<Map> {
   }
 
   /// Formats a single value using the appropriate type formatter.
-  String _formatValue(String level, dynamic value, Context context) {
+  String _formatValue(Level level, dynamic value, Context context) {
     if (value == null) return 'null';
 
     final formatter = _valueFormatters[value.runtimeType];

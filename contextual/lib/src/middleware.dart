@@ -1,8 +1,11 @@
+import 'dart:async';
+
+import 'package:contextual/src/types.dart';
+
 /// Interface for log entry middlewares
 abstract class DriverMiddleware {
   /// Handle a log entry and return a result indicating how to proceed.
-  DriverMiddlewareResult handle(
-      String driverName, MapEntry<String, String> entry);
+  FutureOr<DriverMiddlewareResult> handle(String driverName, LogEntry entry);
 }
 
 /// Represents the possible actions that a [DriverMiddleware] can take when handling a log entry.
@@ -16,7 +19,7 @@ enum DriverMiddlewareAction { proceed, stop, modify }
 /// proceed, stop, or modify the log entry.
 class DriverMiddlewareResult {
   final DriverMiddlewareAction action;
-  final MapEntry<String, String>? modifiedEntry;
+  final LogEntry? modifiedEntry;
 
   /// Creates a [DriverMiddlewareResult] instance that indicates the log entry should be
   /// processed without any modifications.
@@ -32,7 +35,7 @@ class DriverMiddlewareResult {
 
   /// Creates a [DriverMiddlewareResult] instance that indicates the log entry should be
   /// modified with the provided [newEntry].
-  DriverMiddlewareResult.modify(MapEntry<String, String> newEntry)
+  DriverMiddlewareResult.modify(LogEntry newEntry)
       : action = DriverMiddlewareAction.modify,
         modifiedEntry = newEntry;
 }

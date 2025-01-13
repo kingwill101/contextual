@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'log_level.dart';
+
+typedef LogCallback = Future<void> Function();
 
 /// A class that represents the configuration for a [LogSink].
 ///
@@ -75,7 +78,7 @@ class LogSinkConfig {
 /// );
 ///
 /// // Add a log
-/// await sink.addLog(LogLevel.info.value, () async {
+/// await sink.addLog(Level.info.value, () async {
 ///   await someLoggingOperation();
 /// });
 ///
@@ -96,7 +99,7 @@ class LogSink {
   bool _isFlushing = false;
 
   /// Buffer to store pending log operations.
-  final List<MapEntry<String, Future<void> Function()>> _logBuffer = [];
+  final Queue<MapEntry<Level, Future<void> Function()>> _logBuffer = Queue();
 
   /// Timer for automatic flush operations.
   Timer? _flushTimer;
@@ -124,17 +127,18 @@ class LogSink {
   /// Emergency and critical logs are flushed immediately. Other logs are
   /// batched until either the [batchSize] is reached or the [autoFlushInterval]
   /// triggers a flush.
-  Future<void> addLog(String level, Future<void> Function() logCallback) async {
+  Future<void> addLog(
+      Level level, Future<void> Function() logCallback) async {
     if (_flushTimer == null) {
       _startFlushTimer();
     }
 
-    _logBuffer.add(MapEntry(level, logCallback));
+    _logBuffer.addFirst(MapEntry(level, logCallback));
     _resetAutoCloseTimer();
 
     // Flush immediately for emergency logs or batch threshold reached
-    if (level == LogLevel.emergency.value ||
-        level == LogLevel.critical.value ||
+    if (level == Level.emergency ||
+        level == Level.critical ||
         _logBuffer.length >= batchSize) {
       await _flushPendingLogs(); // Immediate flush for critical logs
     }
@@ -160,18 +164,10 @@ class LogSink {
     _isFlushing = true;
 
     try {
-      final logsToFlush =
-          List<MapEntry<String, Future<void> Function()>>.from(_logBuffer);
-      _logBuffer.clear(); // Clear buffer before logging
-
-      // Execute all log callbacks concurrently and wait for them to complete
-      await Future.wait(logsToFlush.map((logEntry) async {
-        try {
-          await logEntry.value();
-        } catch (e) {
-          print('[LogSink Error] Failed to log: $e');
-        }
-      }));
+      while (_logBuffer.isNotEmpty) {
+        final logEntry = _logBuffer.removeLast();
+        await logEntry.value();
+      }
     } catch (e) {
       print('[LogSink Error] Error during flush: $e');
     } finally {

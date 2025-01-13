@@ -1,6 +1,8 @@
+import 'package:contextual/src/log_level.dart';
+
 import '../context.dart';
-import 'message_formatter.dart';
 import '../util.dart';
+import 'message_formatter.dart';
 
 /// A [LogMessageFormatter] implementation that formats log messages in a plain text format.
 class PlainTextLogFormatter extends LogMessageFormatter {
@@ -9,7 +11,7 @@ class PlainTextLogFormatter extends LogMessageFormatter {
   });
 
   @override
-  String format(String level, String message, Context context) {
+  String format(Level level, String message, Context context) {
     final contextData =
         settings.includeHidden ? context.all() : context.visible();
     final formattedMessage =
