@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:contextual/src/format/json.dart';
-import 'package:contextual/src/format/pretty.dart';
-import 'package:contextual/src/format/raw.dart';
+
+import 'package:contextual/src/format/null.dart';
+import 'package:contextual/src/types.dart';
 
 import 'abstract_logger.dart';
 import 'config.dart';
@@ -13,8 +13,11 @@ import 'driver/driver.dart';
 import 'driver/stack.dart';
 import 'driver/webhook.dart';
 import 'format/formatter_settings.dart';
+import 'format/json.dart';
 import 'format/message_formatter.dart';
 import 'format/plain.dart';
+import 'format/pretty.dart';
+import 'format/raw.dart';
 import 'log_level.dart';
 import 'logtype_formatter.dart';
 import 'middleware.dart';
@@ -28,7 +31,7 @@ import 'sink.dart';
 ///
 /// This can be used to implement custom logging sinks or integrations.
 typedef LogListener = void Function(
-    String level, String message, DateTime time);
+    Level level, String message, DateTime time);
 
 /// A configurable logging system with support for multiple output channels.
 ///
@@ -38,98 +41,117 @@ typedef LogListener = void Function(
 /// Supports several built-in drivers:
 /// - `console` for terminal output with optional colors
 /// - `daily` for rotating file logs
-/// - `stack` for in-memory buffers
+/// - `stack` for combining multiple drivers
 /// - `webhook` for HTTP endpoints like Slack
 ///
 /// Example:
-/// ```dart
+///
 /// final logger = Logger()
 ///   ..environment('development')
-///   ..addDriver('file', DailyFileLogDriver('app.log'))
+///   ..addChannel('file', DailyFileLogDriver('app.log'))
 ///   ..withContext({'app': 'MyApp'});
 ///
-/// await logger.info('Application started');
-/// ```
+/// logger.info('Application started');
+///
+///
 /// This logger supports asynchronous logging with batching and automatic flushing
 /// through the use of a [LogSink]. The sink options can be configured to control
 /// how logs are processed and delivered.
 ///
 /// Example:
-/// ```dart
+///
 /// final logger = Logger(
 ///   sinkConfig: LogSinkConfig(
 ///     batchSize: 50,  // Flush after 50 logs
 ///     flushInterval: Duration(seconds: 5),  // Or every 5 seconds
 ///     maxRetries: 3,  // Retry failed operations
-///     autoFlush: true  // Enable automatic flushing
+///     autoFlush: true  // Enable or disable automatic flushing
 ///   )
 /// );
-/// ```
+///
 class Logger extends AbstractLogger {
-  /// Map of channel names to their corresponding log drivers
-  /// Each channel represents a distinct logging destination
+  /// Map of channel names to their corresponding log drivers.
+  /// Each channel represents a distinct logging destination.
   final Map<String, LogDriver> _channels = {};
 
-  /// Driver-specific middlewares mapped by driver name
-  /// Each driver can have its own middleware chain for processing logs
+  /// Driver-specific middlewares mapped by driver name.
+  /// Each driver can have its own middleware chain for processing logs.
   final Map<String, List<DriverMiddleware>> _driverMiddlewares = {};
 
-  /// Global middlewares applied to all drivers
-  /// These run before any driver-specific middlewares
+  /// Channel-specific middlewares mapped by channel name.
+  /// Each channel can have its own middleware chain for processing logs.
+  final Map<String, List<DriverMiddleware>> _channelMiddlewares = {};
+
+  /// Global middlewares applied to all drivers.
+  /// These run before any driver-specific middlewares.
   final List<DriverMiddleware> _globalMiddlewares = [];
 
-  /// Middleware for modifying context data
-  /// Executed before each log operation to enrich context
+  /// Middleware for modifying context data.
+  /// Executed before each log operation to enrich context.
   final List<ContextMiddleware> _contextMiddlewares = [];
 
   /// How log messages are converted to strings.
   LogMessageFormatter _formatter;
 
-  /// Shared context that applies to all log entries
-  /// Maintains application-wide contextual information
+  /// Shared context that applies to all log entries.
+  /// Maintains application-wide contextual information.
   final Context _sharedContext = Context();
 
-  /// Factory for creating log drivers
-  /// Handles instantiation of built-in and custom drivers
+  /// Factory for creating log drivers.
+  /// Handles instantiation of built-in and custom drivers.
   final LogDriverFactory _driverFactory = LogDriverFactory();
 
-  /// Type-specific formatters for custom log message formatting
-  /// Enables specialized formatting for different object types
+  /// Type-specific formatters for custom log message formatting.
+  /// Enables specialized formatting for different object types.
   final Map<Type, LogTypeFormatter> _typeFormatters = {};
 
-  /// Current environment (e.g., development, production)
-  /// Used for environment-specific logging configuration
+  /// Current environment (e.g., development, production).
+  /// Used for environment-specific logging configuration.
   String _environment;
 
-  /// Logger configuration
-  /// Contains channel definitions and default settings
+  /// Logger configuration.
+  /// Contains channel definitions and default settings.
   LogConfig? _config;
 
-  /// Log sink for batching and async processing of logs
-  /// Provides buffering and asynchronous writing capabilities
+  /// Log sink for batching and async processing of logs.
+  /// Provides buffering and asynchronous writing capabilities.
   late LogSink _logSink;
 
-  /// Currently targeted channels for logging
-  /// Used for temporary channel selection in logging operations
+  /// Currently targeted channels for logging.
+  /// Used for temporary channel selection in logging operations.
   Set<String>? _targetChannels;
+
+  /// Map to store per-channel formatters.
+  final Map<String, LogMessageFormatter> _channelFormatters = {};
+
+  /// Map to store registered formatter builders.
+  final Map<String, LogMessageFormatterBuilder> _formatterFactory = {};
+
+  /// Registers a formatter with the specified name and builder function.
+  ///
+  /// This allows formatters to be referenced by name in configuration files.
+  void registerFormatter(String name, LogMessageFormatterBuilder builder) {
+    _formatterFactory[name] = builder;
+  }
 
   /// Creates a logger with the given configuration options.
   ///
   /// By default uses the production environment and plain text formatting.
   ///
-  /// ```dart
+  ///
   /// final logger = Logger(
   ///   environment: 'development',
   ///   formatter: JsonLogFormatter(),
   ///   sinkConfig: LogSinkConfig(batchSize: 50),
   /// );
-  /// ```
+  ///
   Logger(
       {LogConfig? config,
       String? environment,
       LogSinkConfig? sinkConfig,
       LogMessageFormatter? formatter,
-      FormatterSettings? formatterSettings})
+      FormatterSettings? formatterSettings,
+      this.defaultChannelEnabled = true})
       : _formatter = formatter ?? PlainTextLogFormatter(),
         _environment = environment ?? "production" {
     _logSink = LogSink(
@@ -141,12 +163,25 @@ class Logger extends AbstractLogger {
           : const Duration(seconds: 1),
     );
     _registerDefaultDrivers();
+    _registerBuiltInFormatters(); // Register formatters
     _config = config;
     _loadConfig();
   }
 
-  /// Optional listener for log entries
+  void _registerBuiltInFormatters() {
+    registerFormatter('plain', () => PlainTextLogFormatter());
+    registerFormatter('json', () => JsonLogFormatter());
+    registerFormatter('pretty', () => PrettyLogFormatter());
+    registerFormatter('raw', () => RawLogFormatter());
+    registerFormatter('null', () => NullLogFormatter());
+    // Register any other built-in or custom formatters here
+  }
+
+  /// Optional listener for log entries.
   LogListener? _listener;
+
+  /// Indicates whether the default `console` channel is enabled.
+  bool defaultChannelEnabled;
 
   /// Sets a listener for log entries. When set, this bypasses the sink
   /// and directly sends logs to the listener.
@@ -169,7 +204,7 @@ class Logger extends AbstractLogger {
   /// This method will initialize all channels that match the current environment.
   ///
   /// Parameters:
-  /// - [config]: The configuration object containing channel definitions
+  /// - [config]: The configuration object containing channel definitions.
   ///
   /// Returns the Logger instance for method chaining.
   Logger config(LogConfig config) {
@@ -184,7 +219,7 @@ class Logger extends AbstractLogger {
   /// Common values include 'development', 'testing', and 'production'.
   ///
   /// Parameters:
-  /// - [environment]: The environment name to set
+  /// - [environment]: The environment name to set.
   ///
   /// Returns the Logger instance for method chaining.
   Logger environment(String environment) {
@@ -213,13 +248,13 @@ class Logger extends AbstractLogger {
   /// Returns the Logger instance to allow method chaining.
   ///
   /// Example:
-  /// ```dart
+  ///
   /// logger.addMiddleware(() => {
   ///   'timestamp': DateTime.now().toIso8601String(),
   ///   'requestId': generateRequestId(),
   ///   'userId': getCurrentUserId()
   /// });
-  /// ```
+  ///
   Logger addMiddleware(ContextMiddleware middleware) {
     _contextMiddlewares.add(middleware);
     return this;
@@ -231,18 +266,14 @@ class Logger extends AbstractLogger {
   /// before they are processed by any driver.
   ///
   /// Parameters:
-  /// - [middleware]: The middleware instance to add
+  /// - [middleware]: The middleware instance to add.
   ///
   /// Returns the Logger instance for method chaining.
   ///
   /// Example:
-  /// ```dart
-  /// logger.addLogMiddleware(new SensitiveDataFilter());
-  /// ```
-  /// Adds a middleware that applies to all drivers.
   ///
-  /// Global middlewares run before any driver-specific middlewares and
-  /// are applied to each driver's log entries independently.
+  /// logger.addLogMiddleware(SensitiveDataFilter());
+  ///
   Logger addLogMiddleware(DriverMiddleware middleware) {
     _globalMiddlewares.add(middleware);
     return this;
@@ -250,33 +281,46 @@ class Logger extends AbstractLogger {
 
   /// Adds a middleware specific to a named driver.
   ///
-  /// Driver-specific middlewares only affect logs sent to the specified driver.
+  /// Driver-specific middlewares only affect logs sent to the specified driver type.
   ///
   /// Parameters:
-  /// - [driverName]: Name of the driver to add middleware for
-  /// - [middleware]: The middleware instance to add
+  /// - [driverName]: Name of the driver type to add middleware for.
+  /// - [middleware]: The middleware instance to add.
   ///
   /// Returns the Logger instance for method chaining.
-  /// Adds a middleware that only applies to a specific driver.
   ///
-  /// The [driverName] parameter specifies which driver the middleware applies to.
-  /// Multiple middlewares for the same driver are executed in the order they were added.
+  /// Example:
+  ///
+  /// logger.addDriverMiddleware('ConsoleLogDriver', CustomMiddleware());
+  ///
   Logger addDriverMiddleware(String driverName, DriverMiddleware middleware) {
     _driverMiddlewares.putIfAbsent(driverName, () => []).add(middleware);
     return this;
   }
 
-  /// Adds a new log driver with the specified name.
+  /// Adds a new log channel with the specified name, driver, optional formatter, and optional middlewares.
   ///
   /// Creates a new logging channel that can be targeted for log output.
   ///
   /// Parameters:
-  /// - [name]: Unique name for the driver
-  /// - [driver]: The driver instance to add
+  /// - [channelName]: Unique name for the channel.
+  /// - [driver]: The driver instance to use.
+  /// - [formatter]: An optional formatter for this channel.
+  /// - [middlewares]: Optional list of middlewares specific to this channel.
   ///
   /// Returns the Logger instance for method chaining.
-  Logger addDriver(String name, LogDriver driver) {
-    _channels[name] = driver;
+  Logger addChannel(String channelName, LogDriver driver,
+      {LogMessageFormatter? formatter, List<DriverMiddleware>? middlewares}) {
+    _channels[channelName] = driver;
+
+    if (formatter != null) {
+      _channelFormatters[channelName] = formatter;
+    }
+
+    if (middlewares != null) {
+      _channelMiddlewares[channelName] = middlewares;
+    }
+
     return this;
   }
 
@@ -285,7 +329,7 @@ class Logger extends AbstractLogger {
   /// Allows specialized formatting for specific object types.
   ///
   /// Parameters:
-  /// - [formatter]: The type formatter instance to add
+  /// - [formatter]: The type formatter instance to add.
   ///
   /// Returns the Logger instance for method chaining.
   Logger addTypeFormatter<T>(LogTypeFormatter<T> formatter) {
@@ -298,7 +342,7 @@ class Logger extends AbstractLogger {
   /// Used internally to instantiate drivers from configuration objects.
   ///
   /// Parameters:
-  /// - [config]: Configuration map for the driver
+  /// - [config]: Configuration map for the driver.
   ///
   /// Returns the constructed LogDriver instance.
   LogDriver buildChannel(Map<String, dynamic> config) {
@@ -316,9 +360,9 @@ class Logger extends AbstractLogger {
   /// Returns the Logger instance for method chaining.
   ///
   /// Example:
-  /// ```dart
+  ///
   /// logger.to(['console', 'file']).info('Message');
-  /// ```
+  ///
   Logger to(List<String> channels) {
     _targetChannels = channels.toSet();
     return this;
@@ -392,15 +436,30 @@ class Logger extends AbstractLogger {
   void _loadConfig() {
     if (_config == null || _config!.channels.isEmpty) {
       // Add a default console log driver if no channels are configured
-      addDriver('console', ConsoleLogDriver());
+      defaultChannelEnabled ? addChannel('console', ConsoleLogDriver()) : {};
       return;
     }
 
     _config?.channels.forEach((name, channelConfig) {
       final mergedConfig = {..._config!.defaults, ...channelConfig.toJson()};
       if (channelConfig.env == 'all' || channelConfig.env == _environment) {
+        // Create the driver using the driver factory
         final driver = _driverFactory.createDriver(mergedConfig);
-        addDriver(name, driver);
+
+        // Check if a formatter is specified in the config
+        LogMessageFormatter? formatter;
+        if (mergedConfig.containsKey('formatter')) {
+          final formatterName = mergedConfig['formatter'];
+          final formatterBuilder = _formatterFactory[formatterName];
+          if (formatterBuilder != null) {
+            formatter = formatterBuilder();
+          } else {
+            throw ArgumentError('Unsupported formatter: $formatterName');
+          }
+        }
+
+        // Add the driver with the optional formatter
+        addChannel(name, driver, formatter: formatter);
       }
     });
   }
@@ -414,14 +473,18 @@ class Logger extends AbstractLogger {
   /// - [level]: Log level for the message
   /// - [message]: The message object to format
   /// - [context]: Current logging context
+  /// - [channelName]: The name of the channel being logged to
   ///
   /// Returns the formatted message string.
-  String _formatMessage(String level, Object message, Context context) {
+  String _formatMessage(
+      Level level, Object message, Context context, String channelName) {
+    // Use the channel-specific formatter if it exists, otherwise use the default formatter
+    final formatter = _channelFormatters[channelName] ?? _formatter;
     final typeFormatter = _typeFormatters[message.runtimeType];
     if (typeFormatter != null) {
       return typeFormatter.format(level, message, context);
     }
-    return _formatter.format(level, message.toString(), context);
+    return formatter.format(level, message.toString(), context);
   }
 
   /// Logs a message with the specified level and optional context.
@@ -442,12 +505,7 @@ class Logger extends AbstractLogger {
   ///   Context({'attempt': 3, 'database': 'users'}));
   /// ```
   @override
-  @override
-  Future<void> log(String level, dynamic message, [Context? context]) async {
-    if (!LogLevel.contains(level)) {
-      throw ArgumentError('Invalid log level: $level');
-    }
-
+  Future<void> log(Level level, dynamic message, [Context? context]) async {
     context ??= Context();
     final combinedContext = Context();
     combinedContext.addAll(_sharedContext.all());
@@ -457,17 +515,10 @@ class Logger extends AbstractLogger {
       combinedContext.addAll(middleware());
     }
 
-    final formattedMessage = _formatMessage(level, message, combinedContext);
     final timestamp = DateTime.now();
 
-    // If listener is set, use it instead of the sink
-    if (_listener != null) {
-      _listener!(level, formattedMessage, timestamp);
-      return;
-    }
-
-    // Otherwise continue with existing sink-based logic
     final selectedChannels = _targetChannels ?? _channels.keys.toSet();
+
     final uniqueDrivers = <String, LogDriver>{};
     for (final channel in selectedChannels) {
       final driver = _channels[channel];
@@ -481,22 +532,43 @@ class Logger extends AbstractLogger {
       final driver = entry.value;
 
       if (driver is StackLogDriver) {
-        driver.setMiddlewares(_driverMiddlewares);
+        driver.setMiddlewares(_driverMiddlewares, _channelMiddlewares);
       }
 
+      // Use the channel-specific formatter if available
+      final formattedMessage =
+          _formatMessage(level, message, combinedContext, channelName);
+
+      // Gather middlewares
+      final globalMiddlewares = _globalMiddlewares;
+      final channelMiddlewares = _channelMiddlewares[channelName] ?? [];
+      final driverName = driver.runtimeType.toString();
+      final driverMiddlewares = _driverMiddlewares[driverName] ?? [];
+
+      // Process the log entry through the middlewares
       var driverLogEntry = await processDriverMiddlewares(
-          logEntry: MapEntry(level, formattedMessage),
-          driverName: channelName,
-          globalMiddlewares: _globalMiddlewares,
-          driverMiddlewaresMap: _driverMiddlewares);
+        logEntry: MapEntry(level, formattedMessage),
+        driverName: channelName,
+        globalMiddlewares: globalMiddlewares,
+        channelMiddlewares: channelMiddlewares,
+        driverMiddlewares: driverMiddlewares,
+      );
 
-      if (driverLogEntry == null) continue;
+      if (driverLogEntry == null) continue; // Log has been filtered out
 
-      await _logSink.addLog(level, () async {
-        await driver.log(driverLogEntry.value);
-      });
+      // If listener is set, use it instead of the sink
+      if (_listener != null) {
+        _listener!(driverLogEntry.key, driverLogEntry.value, timestamp);
+        continue;
+      } else {
+        // Add the log to the sink for asynchronous processing
+        await _logSink.addLog(level, () async {
+          await driver.log(driverLogEntry.value);
+        });
+      }
     }
 
+    // Reset target channels
     _targetChannels = null;
   }
 
@@ -541,7 +613,7 @@ class ErrorLogFormatter extends LogTypeFormatter<Error> {
   /// [error] DatabaseConnectionError: Connection refused | StackTrace: #0 main (file:///app.dart:10:5) ...
   /// ```
   @override
-  String format(String level, Error error, Context context) {
+  String format(Level level, Error error, Context context) {
     return '[$level] ${error.toString()} | StackTrace: ${StackTrace.current}';
   }
 }
