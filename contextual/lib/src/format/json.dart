@@ -27,7 +27,7 @@ class JsonLogFormatter extends LogMessageFormatter {
     }
 
     if (settings.includeLevel) {
-      logEntry['level'] = level;
+      logEntry['level'] = level.toString();
     }
 
     if (settings.includePrefix && context.has('prefix')) {

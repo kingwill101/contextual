@@ -68,8 +68,7 @@ void main() {
     test('should return message as-is', () {
       final context = Context();
       final message = 'Raw message';
-      final formattedMessage =
-          formatter.format(Level.info, message, context);
+      final formattedMessage = formatter.format(Level.info, message, context);
       expect(formattedMessage, equals(message));
     });
   });
@@ -114,13 +113,10 @@ void main() {
           '"details": {"ip": "192.168.1.1", "devices": [laptop, mobile]}, '
           '"success": true, "attempts": 3}';
       // expect(formattedMessage, equals(expectedMessage));
-      expect(formattedMessage, contains(
-        '{"name": "Alice", "age": 30}'
-      ));
+      expect(formattedMessage, contains('{"name": "Alice", "age": 30}'));
 
-      expect(formattedMessage, contains(
-        '{"latitude": 40.7128, "longitude": -74.006}'
-      ));
+      expect(formattedMessage,
+          contains('{"latitude": 40.7128, "longitude": -74.006}'));
     });
   });
 }

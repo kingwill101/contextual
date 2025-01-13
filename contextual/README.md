@@ -5,7 +5,7 @@
 
 A structured logging library for Dart
 
-![Screenshot](screenshot.png)
+![Screenshot](../screenshot.png)
 
 ## Features
 

@@ -30,8 +30,7 @@ import 'sink.dart';
 /// log level, the log message, and the timestamp of the log entry.
 ///
 /// This can be used to implement custom logging sinks or integrations.
-typedef LogListener = void Function(
-    Level level, String message, DateTime time);
+typedef LogListener = void Function(Level level, String message, DateTime time);
 
 /// A configurable logging system with support for multiple output channels.
 ///

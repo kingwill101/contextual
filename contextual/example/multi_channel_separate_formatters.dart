@@ -13,10 +13,11 @@ class CustomFormat2 extends LogMessageFormatter {
     return '@@Custom Format 2: $message@@'.split('').reversed.join();
   }
 }
+
 Future<void> main() async {
   final logger = Logger(defaultChannelEnabled: false);
 
-  logger.setListener((a,v,vv){
+  logger.setListener((a, v, vv) {
     print(v);
   });
 

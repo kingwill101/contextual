@@ -127,8 +127,7 @@ class LogSink {
   /// Emergency and critical logs are flushed immediately. Other logs are
   /// batched until either the [batchSize] is reached or the [autoFlushInterval]
   /// triggers a flush.
-  Future<void> addLog(
-      Level level, Future<void> Function() logCallback) async {
+  Future<void> addLog(Level level, Future<void> Function() logCallback) async {
     if (_flushTimer == null) {
       _startFlushTimer();
     }

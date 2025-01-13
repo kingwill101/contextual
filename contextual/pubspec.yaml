@@ -1,17 +1,15 @@
 name:  contextual
 description: >
   A structured logging library for Dart with support for multiple output channels, 
-  customizable formatting, context management, and middleware processing. 
-  Features include sink-based and listener-based logging patterns, 
-  type-specific formatters, and asynchronous batch processing.
+  customizable formatting, context management, and middleware processing.
 
-version: 1.0.0
+version: 1.1.0
 repository: https://github.com/kingwill101/contextual
 topics: 
   - logging
   - log
 
-homepage: https://github.com/kingwill101/contextual
+homepage: https://github.com/kingwill101/contextual/contextual
 
 issue_tracker: https://github.com/kingwill101/contextual/issues
 
