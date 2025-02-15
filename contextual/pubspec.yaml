@@ -9,9 +9,11 @@ topics:
   - logging
   - log
 
-homepage: https://github.com/kingwill101/contextual/contextual
+homepage: https://github.com/kingwill101/contextual
 
 issue_tracker: https://github.com/kingwill101/contextual/issues
+funding:
+  - https://www.buymeacoffee.com/kingwill101
 
 resolution: workspace
 

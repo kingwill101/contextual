@@ -50,10 +50,12 @@ void main() async {
   print('Server running on port ${server.port}');
 
   // Log server startup
-  logger.info('Server started', Context({
-    'port': server.port,
-    'address': server.address.host,
-  }));
+  logger.info(
+      'Server started',
+      Context({
+        'port': server.port,
+        'address': server.address.host,
+      }));
 }
 
 /// Example request handler that demonstrates different scenarios
@@ -88,7 +90,7 @@ Future<shelf.Response> _handleRequest(shelf.Request request) async {
         // Handle static content or other routes
         return shelf.Response.ok('Hello from Shelf!');
     }
-  } catch (e, stack) {
+  } catch (e, _) {
     // Errors will be logged by the middleware
     return shelf.Response.internalServerError(
       body: 'Internal Server Error',

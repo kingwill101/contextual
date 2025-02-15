@@ -79,6 +79,7 @@
 /// * [Logger] from the contextual package for core logging functionality
 /// * [shelf.Pipeline] for integrating middleware into your Shelf application
 /// * The example directory for more detailed usage examples
+library;
 
 export 'src/default_log_writer.dart';
 export 'src/http_logger.dart';
