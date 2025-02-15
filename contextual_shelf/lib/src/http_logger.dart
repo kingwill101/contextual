@@ -48,6 +48,7 @@ class HttpLogger {
             startTime,
             watch.elapsed,
             memory: memoryUsage,
+            pid: pid,
           );
         }
 

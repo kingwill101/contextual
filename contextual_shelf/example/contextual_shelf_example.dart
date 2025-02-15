@@ -1,52 +1,99 @@
-import 'dart:io';
-
 import 'package:contextual/contextual.dart';
-import 'package:contextual_shelf/src/default_log_writer.dart';
-import 'package:contextual_shelf/src/http_logger.dart';
-import 'package:contextual_shelf/src/log_non_get_requests.dart';
-import 'package:shelf/shelf.dart';
-import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:contextual_shelf/contextual_shelf.dart';
 
+import 'package:shelf/shelf.dart' as shelf;
+import 'package:shelf/shelf_io.dart' as io;
+
+/// Custom log profile that logs non-GET requests and API requests
+class ApiLogProfile implements LogProfile {
+  @override
+  bool shouldLogRequest(shelf.Request request) {
+    return request.method != 'GET' || request.url.path.startsWith('api/');
+  }
+}
+
+/// This example demonstrates how to use contextual_shelf with a Shelf server.
+/// It shows request logging, error handling, and custom log formatting.
 void main() async {
-  // Set up the logger with different channels
+  // Create a logger with multiple channels
   final logger = Logger()
-    ..environment('development') // Set the environment
-    ..withContext({
-      'app': 'ShelfApp',
-    })
-    // Console channel with PrettyLogFormatter
-    ..addChannel('console', ConsoleLogDriver(), formatter: PrettyLogFormatter())
-    // File channel with JsonLogFormatter
+    ..addChannel(
+      'console',
+      ConsoleLogDriver(),
+      formatter: PrettyLogFormatter(),
+    )
     ..addChannel(
       'file',
-      DailyFileLogDriver(
-        'logs/app.log',
-        retentionDays: 7,
-      ),
+      DailyFileLogDriver('logs/server.log'),
       formatter: JsonLogFormatter(),
     );
 
-  final logProfile = LogNonGetRequests(); // Customize as needed
-  final logWriter = DefaultLogWriter(logger);
+  // Create a custom log writer with sanitization
+  final logWriter = DefaultLogWriter(
+    logger,
+    sanitizer: Sanitizer(mask: '[REDACTED]'),
+  );
+
+  // Create a log profile that determines which requests to log
+  final logProfile = ApiLogProfile();
+
+  // Create the HTTP logger middleware
   final httpLogger = HttpLogger(logProfile, logWriter);
 
-  // Define the handler
-  final handler =
-      Pipeline().addMiddleware(httpLogger.middleware).addHandler(_echoRequest);
+  // Create a handler pipeline with logging middleware
+  final handler = const shelf.Pipeline()
+      .addMiddleware(httpLogger.middleware)
+      .addHandler(_handleRequest);
 
   // Start the server
-  final server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 8080);
-  final startMessage = 'Server started on port ${server.port}';
-  logger.to(['console', 'file']).info(startMessage);
+  final server = await io.serve(handler, 'localhost', 8080);
+  print('Server running on port ${server.port}');
+
+  // Log server startup
+  logger.info('Server started', Context({
+    'port': server.port,
+    'address': server.address.host,
+  }));
 }
 
-Response _echoRequest(Request request) {
-  // Simulate an error for demonstration
-  if (request.url.path == 'error') {
-    throw Exception('Simulated exception');
-  }
+/// Example request handler that demonstrates different scenarios
+Future<shelf.Response> _handleRequest(shelf.Request request) async {
+  try {
+    switch (request.url.path) {
+      case 'api/users':
+        // Simulate successful API request
+        return shelf.Response.ok(
+          '{"status": "success", "data": ["user1", "user2"]}',
+          headers: {'content-type': 'application/json'},
+        );
 
-  return Response.ok('Request for "${request.url}"');
+      case 'api/error':
+        // Simulate error condition
+        throw Exception('Simulated API error');
+
+      case 'api/slow':
+        // Simulate slow request
+        await Future.delayed(Duration(seconds: 2));
+        return shelf.Response.ok('Slow response');
+
+      case 'api/auth':
+        // Simulate authenticated request
+        final auth = request.headers['authorization'];
+        if (auth == null) {
+          return shelf.Response.unauthorized('No authorization provided');
+        }
+        return shelf.Response.ok('Authenticated');
+
+      default:
+        // Handle static content or other routes
+        return shelf.Response.ok('Hello from Shelf!');
+    }
+  } catch (e, stack) {
+    // Errors will be logged by the middleware
+    return shelf.Response.internalServerError(
+      body: 'Internal Server Error',
+    );
+  }
 }
 
 String getCurrentFileAndLine() {

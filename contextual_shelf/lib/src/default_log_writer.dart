@@ -17,6 +17,7 @@ class DefaultLogWriter implements LogWriter {
     DateTime startTime,
     Duration elapsedTime, {
     int? memory,
+    int? pid,
   }) {
     // Build the log message string
     final message = '${request.method} ${request.requestedUri} '
@@ -28,6 +29,7 @@ class DefaultLogWriter implements LogWriter {
       'headers': sanitizer.clean(request.headers, ['authorization']),
       'responseHeaders': sanitizer.clean(response.headers, []),
       'memory': memory,
+      'pid': pid,
     };
 
     // Log the message with context
@@ -42,6 +44,7 @@ class DefaultLogWriter implements LogWriter {
     DateTime startTime,
     Duration elapsedTime, {
     int? memory,
+    int? pid,
   }) {
     // Build the log message string
     final message = 'ERROR: ${request.method} ${request.requestedUri} '
@@ -54,6 +57,7 @@ class DefaultLogWriter implements LogWriter {
       'error': error.toString(),
       'stackTrace': stackTrace.toString(),
       'memory': memory,
+      'pid': pid,
     };
 
     // Log the error message with context

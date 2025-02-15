@@ -7,6 +7,7 @@ abstract class LogWriter {
     DateTime startTime,
     Duration elapsedTime, {
     int? memory,
+    int? pid,
   });
 
   void logError(
@@ -16,5 +17,6 @@ abstract class LogWriter {
     DateTime startTime,
     Duration elapsedTime, {
     int? memory,
+    int? pid,
   });
 }
