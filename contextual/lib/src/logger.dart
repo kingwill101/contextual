@@ -116,9 +116,12 @@ class Logger extends AbstractLogger {
   /// Contains channel definitions and default settings.
   LogConfig? _config;
 
+  /// Whether to use the sink for logging
+  final bool useSink;
+
   /// Log sink for batching and async processing of logs.
-  /// Provides buffering and asynchronous writing capabilities.
-  late LogSink _logSink;
+  /// Only initialized if [useSink] is true.
+  LogSink? _logSink;
 
   /// Currently targeted channels for logging.
   /// Used for temporary channel selection in logging operations.
@@ -129,6 +132,28 @@ class Logger extends AbstractLogger {
 
   /// Map to store registered formatter builders.
   final Map<String, LogMessageFormatterBuilder> _formatterFactory = {};
+
+  /// The minimum log level to process. Messages below this level are ignored.
+  Level _minimumLevel = Level.debug;
+
+  /// Indicates whether the default `console` channel is enabled.
+  final bool defaultChannelEnabled;
+
+  /// Optional listener for log entries.
+  LogListener? _listener;
+
+  /// Sets the minimum log level. Messages below this level will be ignored.
+  ///
+  /// Example:
+  /// ```dart
+  /// logger.setLevel(Level.warning); // Only log warning and above
+  /// ```
+  void setLevel(Level level) {
+    _minimumLevel = level;
+  }
+
+  /// Gets the current minimum log level.
+  Level getLevel() => _minimumLevel;
 
   /// Registers a formatter with the specified name and builder function.
   ///
@@ -141,32 +166,46 @@ class Logger extends AbstractLogger {
   ///
   /// By default uses the production environment and plain text formatting.
   ///
+  /// Parameters:
+  /// * [config] - Optional logging configuration
+  /// * [environment] - Operating environment (default: "production")
+  /// * [sinkConfig] - Configuration for the log sink if [useSink] is true
+  /// * [formatter] - Message formatter (default: PlainTextLogFormatter)
+  /// * [formatterSettings] - Settings for the formatter
+  /// * [defaultChannelEnabled] - Whether to enable the default console channel
+  /// * [useSink] - Whether to use the sink for logging (default: false)
   ///
+  /// Example:
+  /// ```dart
   /// final logger = Logger(
   ///   environment: 'development',
   ///   formatter: JsonLogFormatter(),
   ///   sinkConfig: LogSinkConfig(batchSize: 50),
+  ///   useSink: true,
   /// );
-  ///
+  /// ```
   Logger(
       {LogConfig? config,
       String? environment,
       LogSinkConfig? sinkConfig,
       LogMessageFormatter? formatter,
       FormatterSettings? formatterSettings,
-      this.defaultChannelEnabled = true})
+      this.defaultChannelEnabled = true,
+      this.useSink = false})
       : _formatter = formatter ?? PlainTextLogFormatter(),
         _environment = environment ?? "production" {
-    _logSink = LogSink(
-      batchSize: sinkConfig?.batchSize ?? 10,
-      autoFlushInterval:
-          sinkConfig?.flushInterval ?? const Duration(seconds: 1),
-      autoCloseAfter: sinkConfig?.autoFlush == false
-          ? Duration.zero
-          : const Duration(seconds: 1),
-    );
+    if (useSink) {
+      _logSink = LogSink(
+        batchSize: sinkConfig?.batchSize ?? 10,
+        autoFlushInterval:
+            sinkConfig?.flushInterval ?? const Duration(seconds: 1),
+        autoCloseAfter: sinkConfig?.autoFlush == false
+            ? Duration.zero
+            : const Duration(seconds: 1),
+      );
+    }
     _registerDefaultDrivers();
-    _registerBuiltInFormatters(); // Register formatters
+    _registerBuiltInFormatters();
     _config = config;
     _loadConfig();
   }
@@ -180,12 +219,6 @@ class Logger extends AbstractLogger {
     // Register any other built-in or custom formatters here
   }
 
-  /// Optional listener for log entries.
-  LogListener? _listener;
-
-  /// Indicates whether the default `console` channel is enabled.
-  bool defaultChannelEnabled;
-
   /// Sets a listener for log entries. When set, this bypasses the sink
   /// and directly sends logs to the listener.
   ///
@@ -193,7 +226,7 @@ class Logger extends AbstractLogger {
   /// replaces any existing one.
   Future<void> setListener(LogListener listener) async {
     _listener = listener;
-    await _logSink.close();
+    await _logSink?.close();
   }
 
   /// Removes the current listener, reverting to sink-based logging.
@@ -540,7 +573,11 @@ class Logger extends AbstractLogger {
   ///   Context({'attempt': 3, 'database': 'users'}));
   ///
   @override
-  Future<void> log(Level level, dynamic message, [Context? context]) async {
+  void log(Level level, dynamic message, [Context? context]) {
+    if (level < _minimumLevel) {
+      return;
+    }
+
     context ??= Context();
     final combinedContext = Context();
     combinedContext.addAll(_sharedContext.all());
@@ -578,26 +615,28 @@ class Logger extends AbstractLogger {
 
       String formattedMessage = _formatRecord(record, channelName);
 
-      final modifiedMessage = await processDriverMiddlewares(
+      processDriverMiddlewares(
         entry: LogEntry(record, formattedMessage),
         driverName: channelName,
         globalMiddlewares: _globalMiddlewares,
         channelMiddlewares: _channelMiddlewares[channelName] ?? [],
         driverMiddlewares:
             _driverMiddlewares[driver.runtimeType.toString()] ?? [],
-      );
+      ).then((modifiedMessage) async {
+        if (modifiedMessage == null) return; // Log has been filtered out
 
-      if (modifiedMessage == null) continue; // Log has been filtered out
+        final logEntry = LogEntry(record, formattedMessage);
 
-      final logEntry = LogEntry(record, formattedMessage);
-
-      if (_listener != null) {
-        _listener!(logEntry);
-      } else {
-        await _logSink.addLog(logEntry, (entry) async {
-          await driver.log(entry);
-        });
-      }
+        if (_listener != null) {
+          _listener!(logEntry);
+        } else if (useSink && _logSink != null) {
+          await _logSink!.addLog(logEntry, (entry) async {
+            await driver.log(entry);
+          });
+        } else {
+          await driver.log(logEntry);
+        }
+      });
     }
 
     _targetChannels = null;
@@ -629,6 +668,7 @@ class Logger extends AbstractLogger {
   /// Shuts down the logger and flushes any pending logs.
   ///
   /// Ensures all queued logs are written before the application exits.
+  /// If using a sink, waits for all pending logs to be processed.
   ///
   /// Returns a Future that completes when shutdown is finished.
   ///
@@ -643,8 +683,10 @@ class Logger extends AbstractLogger {
       return;
     }
 
-    // Proceed with sink-based shutdown logic
-    await _logSink.close();
+    // Only close the sink if it's being used
+    if (useSink && _logSink != null) {
+      await _logSink!.close();
+    }
   }
 }
 
