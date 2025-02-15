@@ -32,48 +32,48 @@
 ///
 /// The levels are based on RFC 5424 syslog severity levels.
 enum Level {
-  /// System is unusable
-  emergency,
-
-  /// Action must be taken immediately
-  alert,
-
-  /// Critical conditions
-  critical,
-
-  /// Error conditions
-  error,
-
-  /// Warning conditions
-  warning,
-
-  /// Normal but significant conditions
-  notice,
+  /// Debug-level messages
+  debug,
 
   /// Informational messages
   info,
 
-  /// Debug-level messages
-  debug;
+  /// Normal but significant conditions
+  notice,
+
+  /// Warning conditions
+  warning,
+
+  /// Error conditions
+  error,
+
+  /// Critical conditions
+  critical,
+
+  /// Action must be taken immediately
+  alert,
+
+  /// System is unusable
+  emergency;
 
   @override
   String toString() {
     return toUpperCase();
   }
 
-  /// The ordered list of all log levels from most to least severe.
+  /// The ordered list of all log levels from least to most severe.
   ///
   /// This list is used internally for level comparisons and can be
   /// used to iterate through levels in severity order.
   static const List<Level> levels = [
-    emergency,
-    alert,
-    critical,
-    error,
-    warning,
-    notice,
+    debug,
     info,
-    debug
+    notice,
+    warning,
+    error,
+    critical,
+    alert,
+    emergency
   ];
 }
 
