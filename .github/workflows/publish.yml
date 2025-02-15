@@ -2,21 +2,52 @@ name: Publish to pub.dev
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*' # tag pattern on pub.dev: 'v{{version}'
+    branches:
+      - main
 
-# Publish using custom workflow
 jobs:
   publish:
     permissions:
+      contents: write # Required for pushing changes
       id-token: write # Required for authentication using OIDC
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: [contextual, contextual_shelf]
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
       - name: Install dependencies
-        run: dart pub get
-      # Here you can insert custom steps you need
-      # - run: dart tool/generate-code.dart
+        run: |
+          cd ${{ matrix.directory }}
+          dart pub get
+      - name: Get current package version
+        id: get_version
+        run: |
+          cd ${{ matrix.directory }}
+          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+      - name: Check if version has changed
+        id: check_version
+        run: |
+          LAST_VERSION=$(cat .github/versions/${{ matrix.directory }}_version.txt || echo "0.0.0")
+          if [ "$CURRENT_VERSION" != "$LAST_VERSION" ]; then
+            echo "VERSION_CHANGED=true" >> $GITHUB_ENV
+          else
+            echo "VERSION_CHANGED=false" >> $GITHUB_ENV
+          fi
       - name: Publish
-        run: dart pub publish --force
+        if: env.VERSION_CHANGED == 'true'
+        run: |
+          cd ${{ matrix.directory }}
+          dart pub publish --force
+      - name: Update last published version
+        if: env.VERSION_CHANGED == 'true'
+        run: |
+          echo "$CURRENT_VERSION" > .github/versions/${{ matrix.directory }}_version.txt
+      - name: Add & Commit version update
+        if: env.VERSION_CHANGED == 'true'
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: "Update last published version for ${{ matrix.directory }}"
+          add: '.github/versions/${{ matrix.directory }}_version.txt'

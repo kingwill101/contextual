@@ -4,4 +4,5 @@ environment:
   sdk: '^3.6.0'
 workspace:
   - contextual
+  - contextual_shelf
 
