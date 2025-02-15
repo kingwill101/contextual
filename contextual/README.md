@@ -70,17 +70,18 @@ final config = LogConfig.fromJson({
     },
     'file': {
       'driver': 'daily',
-      'path': 'logs/app.log',
-      'days': 7,
+      'config': {
+         'path': 'logs/app.log',
+         'days': 7,
+      },
       'env': 'production',
       'formatter': 'json' // Use the JSON formatter for file channel
     },
     'slack': {
       'driver': 'webhook',
-      'webhookUrl': 'https://hooks.slack.com/...',
-      'username': 'Logger',
-      'emoji': ':warning:',
-      'env': 'production',
+     'config': {
+        'url': 'https://hooks.slack.com/...',
+     }
       'formatter': 'plain' // Use the plain text formatter for Slack channel
     }
   },
@@ -132,8 +133,8 @@ Contextual supports two patterns for handling log output:
     final logger = Logger();
 
     // Set up a simple listener
-    logger.setListener((level, message, time) {
-      print('[$time] $level: $message');
+    logger.setListener((logEntry) {
+      print('[${logEntry.record.time}] ${logEntry.record.level}: $logEntry.message');
     });
 
     // All logs now go to the listener
@@ -149,7 +150,7 @@ Contextual supports two patterns for handling log output:
 Choose the pattern that best fits your needs:
 
 - Use the sink pattern for production systems needing multiple outputs.
-- Use the listener pattern for simple logging during development.
+- Use the listener pattern for simple logging.
 
 
 ## Log Levels
@@ -223,7 +224,9 @@ final config = LogConfig.fromJson({
     },
     'file': {
       'driver': 'daily',
-      'path': 'logs/app.log',
+      'config': {
+        'path': 'logs/app.log',
+      },
       'formatter': 'json'
     }
   }
@@ -237,7 +240,7 @@ Create custom formatters to have full control over log output:
 ```dart
 class MyCustomFormatter extends LogMessageFormatter {
   @override
-  String format(LogLevel level, String message, Context context) {
+  String format(Level level, String message, Context context) {
     // Your custom formatting logic
     return '[Custom] $level: $message';
   }
@@ -268,7 +271,7 @@ class User {
 
 class UserFormatter extends LogTypeFormatter<User> {
   @override
-  String format(LogLevel level, User user, Context context) {
+  String format(Level level, User user, Context context) {
     return '{"name": "${user.name}", "email": "${user.email}"}';
   }
 }
@@ -386,40 +389,44 @@ Channels are named logging destinations that can be configured independently. Ea
 ```dart
 // Configure multiple channels with per-channel formatters
 final logger = Logger(
-  config: LogConfig.fromJson({
-    'channels': {
-      // Console output for development with pretty formatting
-      'console': {
-        'driver': 'console',
-        'env': 'development',
-        'formatter': 'pretty'
-      },
-      // Daily rotating file for production logs with JSON formatting
-      'daily': {
-        'driver': 'daily',
-        'path': 'logs/app.log',
-        'days': 7,
-        'env': 'production',
-        'formatter': 'json'
-      },
-      // Slack notifications for critical issues with plain text formatting
-      'slack': {
-        'driver': 'webhook',
-        'webhookUrl': 'https://hooks.slack.com/...',
-        'username': 'Emergency Bot',
-        'emoji': ':rotating_light:',
-        'env': 'production',
-        'formatter': 'plain'
+    config: LogConfig.fromJson({
+      'channels': {
+        // Console output for development with pretty formatting
+        'console': {
+          'driver': 'console',
+          'env': 'development',
+          'formatter': 'pretty'
+        },
+        // Daily rotating file for production logs with JSON formatting
+        'daily': {
+          'driver': 'daily',
+          'config': {
+            'path': 'logs/app.log',
+            'days': 7,
+          }
+          'env': 'production',
+          'formatter': 'json'
+        },
+        // Slack notifications for critical issues with plain text formatting
+        'slack': {
+          'driver': 'webhook',
+          'config': {
+            'url': 'https://hooks.slack.com/...',
+          },
+          'env': 'production',
+          'formatter': 'plain'
+        }
       }
-    }
-  })
+    })
 );
 // Log to specific channels
-logger.to(['console', 'daily']).info('Regular log message');
+logger.to
+(['console', 'daily']).info('Regular log message');
 logger.to(['slack']).critical('Critical system failure!');
 
 // Default behavior logs to all channels for the current environment
-logger.error('This goes to all active channels');
+logger.error('This goes to all active channels'
+);
 ```
 
 ## Environment-based Channel Selection
@@ -447,29 +454,111 @@ final logger = Logger(environment: 'production')
 // In development: logs to 'console' and 'debug'
 ```
 
+### Driver Configuration Options
+
+Below are the configuration options for each available driver:
+
+- **Console Driver**
+   - **Driver Name:** `console`
+   - **Configuration:** No additional configuration required.
+
+- **Daily File Driver**
+   - **Driver Name:** `daily`
+   - **Configuration Options:**
+      - `path`: The file path where logs will be stored. Default is `logs/default.log`.
+      - `days`: Number of days to retain log files. Default is `14`.
+
+- **Webhook Driver**
+   - **Driver Name:** `webhook`
+   - **Configuration Options:**
+      - `url`: The webhook URL to send logs to.
+
+- **Sampling Driver**
+   - **Driver Name:** `sampling`
+   - **Configuration Options:**
+      - `sample_rates`: A map of log levels to sampling rates.
+      - `wrapped_driver`: Configuration for the driver that will be wrapped by the sampling driver. Must include a `driver` key.
+
+- **Stack Driver**
+   - **Driver Name:** `stack`
+   - **Configuration Options:**
+      - `channels`: A list of channel names to forward logs to.
+      - `ignore_exceptions`: Boolean to ignore exceptions during logging. Default is `false`.
+
+### Example Configuration
+
+```dart
+final config = LogConfig.fromJson({
+   'channels': {
+      'console': {
+         'driver': 'console',
+      },
+      'daily': {
+         'driver': 'daily',
+         'config': {
+            'path': 'logs/app.log',
+            'days': 7,
+         },
+      },
+      'webhook': {
+         'driver': 'webhook',
+         'config': {
+            'url': 'https://hooks.slack.com/...',
+         },
+      },
+      'sampling': {
+         'driver': 'sampling',
+         'config': {
+            'sample_rates': {
+               'info': 0.1,
+               'error': 1.0,
+            },
+            'wrapped_driver': {
+               'driver': 'console',
+            },
+         },
+      },
+      'stack': {
+         'driver': 'stack',
+         'config': {
+            'channels': ['console', 'daily'],
+            'ignore_exceptions': true,
+         },
+      },
+   },
+});
+```
+
 ## Stack Channels
 Stack channels allow you to create a single channel that forwards logs to multiple other channels. This is useful when you want to send the same logs to multiple destinations with different formatting and filtering:
 
 ```dart
+
 final config = LogConfig.fromJson({
   'channels': {
     // Individual channels with their own formatters
     'file': {
       'driver': 'daily',
-      'path': 'logs/app.log',
+      'config': {
+        'path': 'logs/app.log',
+      }
       'formatter': 'json'
     },
     'slack': {
       'driver': 'webhook',
-      'webhookUrl': 'https://hooks.slack.com/...',
+      'config': {
+        'url': 'https://hooks.slack.com/...',
+      }
       'formatter': 'plain'
     },
 
     // Stack channel that combines both
     'production': {
       'driver': 'stack',
-      'channels': ['file', 'slack'], // Will forward to both channels
-      'ignoreExceptions': true
+       'config': {
+        'channels': ['file', 'slack'], // Will forward to both channels
+          'ignore_exceptions': true
+       }
     }
   }
 });
@@ -516,31 +605,32 @@ logger.info('User action'); // Includes requestId, timestamp, and userId
 Driver middleware processes log entries before they reach specific drivers. Channel middleware works similarly but is associated with channels.
 
 ```dart
-// Filter sensitive data from all logs
+
+// Example of a middleware that filters sensitive data
 class SensitiveDataMiddleware implements DriverMiddleware {
   @override
-  Future<MapEntry<String, String>?> handle(
-    MapEntry<String, String> entry,
-    String driverName,
-  ) async {
-    var message = entry.value;
+  FutureOr<DriverMiddlewareResult> handle(
+      String driverName,
+      LogEntry entry,
+      ) async {
+    var message = entry.message;
     message = message.replaceAll(RegExp(r'password=[\w\d]+'), 'password=***');
-    return MapEntry(entry.key, message);
+    return DriverMiddlewareResult.modify(entry.copyWith(message: message));
   }
 }
 
-// Only allow errors to reach certain drivers
+// Example of a middleware that only allows error-level logs
 class ErrorOnlyMiddleware implements DriverMiddleware {
   @override
-  Future<MapEntry<String, String>?> handle(
-    MapEntry<String, String> entry,
-    String driverName,
-  ) async {
+  FutureOr<DriverMiddlewareResult> handle(
+      String driverName,
+      LogEntry entry,
+      ) async {
     final errorLevels = ['emergency', 'alert', 'critical', 'error'];
-    if (!errorLevels.contains(entry.key.toLowerCase())) {
-      return null; // Stop processing this log entry
+    if (!errorLevels.contains(entry.record.level.name.toLowerCase())) {
+      return DriverMiddlewareResult.stop();
     }
-    return entry;
+    return DriverMiddlewareResult.proceed();
   }
 }
 
