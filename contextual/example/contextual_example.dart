@@ -1,17 +1,16 @@
 import 'dart:convert';
+
 import 'package:contextual/contextual.dart';
-import 'package:contextual/src/types.dart';
 
 /// Middleware that blocks sensitive logs containing passwords
 class BlockSensitiveLogsMiddleware implements DriverMiddleware {
   @override
   DriverMiddlewareResult handle(String driverName, LogEntry entry) {
-    if (entry.value.contains('password')) {
+    if (entry.message.contains('password')) {
       print('[Middleware] Sensitive log detected. Blocking log.');
-      return DriverMiddlewareResult.stop(); // Block the log entirely
+      return DriverMiddlewareResult.stop();
     }
-    return DriverMiddlewareResult
-        .proceed(); // Proceed if no sensitive information
+    return DriverMiddlewareResult.proceed();
   }
 }
 
@@ -23,8 +22,12 @@ class AddTagMiddleware implements DriverMiddleware {
 
   @override
   DriverMiddlewareResult handle(String driverName, LogEntry entry) {
-    final modifiedMessage = '${entry.value} [$tag for $driverName]';
-    return DriverMiddlewareResult.modify(MapEntry(entry.key, modifiedMessage));
+    final modifiedMessage = '${entry.message} [$tag for $driverName]';
+
+    // Create a new LogEntry with the modified message
+    final modifiedEntry = entry.copyWith(message: modifiedMessage);
+
+    return DriverMiddlewareResult.modify(modifiedEntry);
   }
 }
 
@@ -36,8 +39,8 @@ class AddUserMiddleware implements DriverMiddleware {
 
   @override
   DriverMiddlewareResult handle(String driverName, LogEntry entry) {
-    final enrichedMessage = '${entry.value} | User: $username';
-    return DriverMiddlewareResult.modify(MapEntry(entry.key, enrichedMessage));
+    return DriverMiddlewareResult.modify(
+        entry.copyWith(message: '${entry.message} | User: $username'));
   }
 }
 
@@ -69,13 +72,21 @@ void main() async {
     defaults: {'env': 'production'},
     channels: {
       'console': ChannelConfig(driver: 'console'),
-      'file': ChannelConfig(driver: 'daily', path: 'logs/app.log', days: 7),
+      'file': ChannelConfig(
+        driver: 'daily',
+        config: {
+          'path': 'logs/app.log',
+          'days': 7,
+        },
+      ),
       'webhook': ChannelConfig(
         driver: 'webhook',
-        webhookUrl: Uri.parse(
-            'https://webhook-test.com/b61f3ee766b6354bb67881df60708333'),
-        username: 'LoggerBot',
-        emoji: ':robot:',
+        config: {
+          'webhookUrl':
+              'https://webhook-test.com/b61f3ee766b6354bb67881df60708333',
+          'username': 'LoggerBot',
+          'emoji': ':robot:',
+        },
       ),
     },
   );

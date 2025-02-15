@@ -38,4 +38,15 @@ class LogRecord {
       stackTrace: stackTrace,
     );
   }
+
+  /// Converts the log record to a JSON-compatible map.
+  Map<String, dynamic> toJson() {
+    return {
+      'time': time.toIso8601String(),
+      'level': level.name,
+      'message': message,
+      'context': context.all(),
+      'stackTrace': stackTrace?.toString(),
+    };
+  }
 }

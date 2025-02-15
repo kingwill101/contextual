@@ -71,22 +71,26 @@
 
 library;
 
-export 'src/logger.dart';
-export 'src/log_level.dart';
+export 'src/config.dart';
 export 'src/context.dart';
-export 'src/middleware.dart';
 export 'src/context_middleware.dart';
-export 'src/logtype_formatter.dart';
-export 'src/driver/driver.dart';
 export 'src/driver/console.dart';
 export 'src/driver/daily.dart';
+export 'src/driver/driver.dart';
 export 'src/driver/sample.dart';
 export 'src/driver/stack.dart';
 export 'src/driver/webhook.dart';
-export 'src/config.dart';
+export 'src/format/formatter_settings.dart';
+export 'src/format/json.dart';
 export 'src/format/message_formatter.dart';
 export 'src/format/plain.dart';
-export 'src/format/json.dart';
 export 'src/format/pretty.dart';
 export 'src/format/raw.dart';
-export 'src/format/formatter_settings.dart';
+export 'src/log_entry.dart';
+export 'src/log_level.dart';
+export 'src/logger.dart';
+export 'src/logtype_formatter.dart';
+export 'src/middleware.dart';
+export 'src/util.dart';
+export 'src/sink.dart';
+export 'src/record.dart';

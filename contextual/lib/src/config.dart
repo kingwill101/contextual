@@ -40,28 +40,18 @@ class LogConfig {
 /// such as the driver, path, days to retain logs, and other channel-specific
 /// settings.
 class ChannelConfig {
+  final String name;
   final String driver;
-  final String? path;
-  final int? days;
-  final List<String>? channels;
-  final bool ignoreExceptions;
+  Map<String, dynamic> config = const {};
   final String env;
-  final Uri? webhookUrl;
-  final String? username;
-  final String? emoji;
   final String? formatter;
 
   ChannelConfig({
+    this.name = '',
     required this.driver,
-    this.path,
-    this.days,
-    this.channels,
-    this.ignoreExceptions = false,
-    this.env = 'all',
-    this.webhookUrl,
-    this.username,
-    this.emoji,
     this.formatter,
+    this.env = 'all',
+    this.config = const {},
   });
 
   /// Constructs a [ChannelConfig] instance from a JSON map.
@@ -72,30 +62,17 @@ class ChannelConfig {
   factory ChannelConfig.fromJson(Map<String, dynamic> json) {
     return ChannelConfig(
       driver: json['driver'],
-      path: json['path'],
-      days: json['days'],
-      channels: (json['channels'] as List?)?.map((e) => e.toString()).toList(),
-      ignoreExceptions: json['ignoreExceptions'] ?? false,
-      env: json['env'] ?? 'all',
-      webhookUrl:
-          json['webhookUrl'] != null ? Uri.parse(json['webhookUrl']) : null,
-      username: json['username'],
-      emoji: json['emoji'],
+      config: json['config'] ?? const {},
       formatter: json['formatter'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'name': name,
       'driver': driver,
-      if (path != null) 'path': path,
-      if (days != null) 'days': days,
-      if (channels != null) 'channels': channels,
-      'ignoreExceptions': ignoreExceptions,
+      'config': config,
       'env': env,
-      if (webhookUrl != null) 'webhookUrl': webhookUrl.toString(),
-      if (username != null) 'username': username,
-      if (emoji != null) 'emoji': emoji,
       if (formatter != null) 'formatter': formatter,
     };
   }

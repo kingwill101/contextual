@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'log_level.dart';
+import 'package:contextual/src/log_level.dart';
 
-typedef LogCallback = Future<void> Function();
+import 'log_entry.dart';
+
+typedef LogCallback = Future<void> Function(LogEntry entry);
 
 /// A class that represents the configuration for a [LogSink].
 ///
@@ -99,7 +101,7 @@ class LogSink {
   bool _isFlushing = false;
 
   /// Buffer to store pending log operations.
-  final Queue<MapEntry<Level, Future<void> Function()>> _logBuffer = Queue();
+  final Queue<MapEntry<LogEntry, LogCallback>> _logBuffer = Queue();
 
   /// Timer for automatic flush operations.
   Timer? _flushTimer;
@@ -121,25 +123,25 @@ class LogSink {
 
   /// Adds a new log operation to the sink.
   ///
-  /// The [level] parameter specifies the log level, and [logCallback] is the
+  /// The [entry] parameter specifies the log entry, and [logCallback] is the
   /// actual logging operation to perform.
   ///
   /// Emergency and critical logs are flushed immediately. Other logs are
   /// batched until either the [batchSize] is reached or the [autoFlushInterval]
   /// triggers a flush.
-  Future<void> addLog(Level level, Future<void> Function() logCallback) async {
+  Future<void> addLog(LogEntry entry, LogCallback logCallback) async {
     if (_flushTimer == null) {
       _startFlushTimer();
     }
 
-    _logBuffer.addFirst(MapEntry(level, logCallback));
+    _logBuffer.addFirst(MapEntry(entry, logCallback));
     _resetAutoCloseTimer();
 
-    // Flush immediately for emergency logs or batch threshold reached
-    if (level == Level.emergency ||
-        level == Level.critical ||
+    // Flush immediately for emergency/critical logs or batch threshold reached
+    if (entry.record.level == Level.emergency ||
+        entry.record.level == Level.critical ||
         _logBuffer.length >= batchSize) {
-      await _flushPendingLogs(); // Immediate flush for critical logs
+      await _flushPendingLogs(); // Immediate flush
     }
   }
 
@@ -165,7 +167,7 @@ class LogSink {
     try {
       while (_logBuffer.isNotEmpty) {
         final logEntry = _logBuffer.removeLast();
-        await logEntry.value();
+        await logEntry.value(logEntry.key);
       }
     } catch (e) {
       print('[LogSink Error] Error during flush: $e');

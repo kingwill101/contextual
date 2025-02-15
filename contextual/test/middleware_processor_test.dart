@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:contextual/src/types.dart';
-import 'package:test/test.dart';
+import 'package:contextual/src/log_entry.dart';
+import 'package:contextual/src/log_level.dart';
 import 'package:contextual/src/middleware.dart';
 import 'package:contextual/src/middleware_processor.dart';
-import 'package:contextual/src/log_level.dart';
+import 'package:contextual/src/record.dart';
+import 'package:test/test.dart';
 
 class ModifyMiddleware extends DriverMiddleware {
   final String appendText;
@@ -12,11 +13,14 @@ class ModifyMiddleware extends DriverMiddleware {
   ModifyMiddleware(this.appendText);
 
   @override
-  @override
   FutureOr<DriverMiddlewareResult> handle(
       String driverName, LogEntry entry) async {
-    final modifiedMessage = '${entry.value}$appendText';
-    return DriverMiddlewareResult.modify(MapEntry(entry.key, modifiedMessage));
+    final modifiedMessage = '${entry.message}$appendText';
+
+    // Create a new LogEntry with the modified message
+    final modifiedEntry = LogEntry(entry.record, modifiedMessage);
+
+    return DriverMiddlewareResult.modify(modifiedEntry);
   }
 }
 
@@ -28,138 +32,11 @@ class StopMiddleware extends DriverMiddleware {
   @override
   FutureOr<DriverMiddlewareResult> handle(
       String driverName, LogEntry entry) async {
-    if (entry.value.contains(keyword)) {
+    if (entry.message.contains(keyword)) {
       return DriverMiddlewareResult.stop();
     }
     return DriverMiddlewareResult.proceed();
   }
-}
-
-void main() {
-  group('Middleware Processor', () {
-    test('applies middlewares in correct order and handles actions', () async {
-      final entry = MapEntry(Level.info, 'Initial message');
-
-      final globalMiddleware = [
-        ModifyMiddleware(' [Global]'),
-      ];
-
-      final channelMiddleware = [
-        ModifyMiddleware(' [Channel]'),
-      ];
-
-      final driverMiddleware = [
-        ModifyMiddleware(' [Driver]'),
-      ];
-
-      final result = await processDriverMiddlewares(
-        logEntry: entry,
-        driverName: 'testDriver',
-        globalMiddlewares: globalMiddleware,
-        channelMiddlewares: channelMiddleware,
-        driverMiddlewares: driverMiddleware,
-      );
-
-      expect(
-          result?.value, equals('Initial message [Global] [Channel] [Driver]'));
-    });
-
-    test('middleware can stop processing the log entry', () async {
-      final entry = MapEntry(Level.info, 'Sensitive data');
-
-      final stopMiddleware = [
-        StopMiddleware('Sensitive'),
-      ];
-
-      final result = await processDriverMiddlewares(
-        logEntry: entry,
-        driverName: 'testDriver',
-        globalMiddlewares: stopMiddleware,
-      );
-
-      expect(result, isNull); // Log entry should be discarded
-    });
-
-    test('modifications by middlewares are cumulative', () async {
-      final entry = MapEntry(Level.info, 'Original message');
-
-      final middlewares = [
-        ModifyMiddleware(' [First]'),
-        ModifyMiddleware(' [Second]'),
-      ];
-
-      final result = await processDriverMiddlewares(
-        logEntry: entry,
-        driverName: 'testDriver',
-        globalMiddlewares: middlewares,
-      );
-
-      expect(result?.value, equals('Original message [First] [Second]'));
-    });
-
-    test('middleware processing stops after stop action', () async {
-      final entry = MapEntry(Level.info, 'Message to stop');
-
-      final middlewares = [
-        ModifyMiddleware(' [Before Stop]'),
-        StopMiddleware('stop'),
-        ModifyMiddleware(' [After Stop]'),
-      ];
-
-      final result = await processDriverMiddlewares(
-        logEntry: entry,
-        driverName: 'testDriver',
-        globalMiddlewares: middlewares,
-      );
-
-      expect(result, isNull); // Log entry should be discarded
-    });
-
-    test(
-        'driver-specific middlewares are applied after global and channel middlewares',
-        () async {
-      final entry = MapEntry(Level.info, 'Initial message');
-
-      final globalMiddleware = [
-        ModifyMiddleware(' [Global]'),
-      ];
-
-      final channelMiddleware = [
-        ModifyMiddleware(' [Channel]'),
-      ];
-
-      final driverMiddleware = [
-        ModifyMiddleware(' [Driver]'),
-      ];
-
-      final result = await processDriverMiddlewares(
-        logEntry: entry,
-        driverName: 'testDriver',
-        globalMiddlewares: globalMiddleware,
-        channelMiddlewares: channelMiddleware,
-        driverMiddlewares: driverMiddleware,
-      );
-
-      expect(
-          result?.value, equals('Initial message [Global] [Channel] [Driver]'));
-    });
-
-    test('middleware can handle async operations', () async {
-      final entry = MapEntry(Level.info, 'Initial message');
-
-      final asyncMiddleware = [
-        AsyncModifyMiddleware(' [Async]'),
-      ];
-
-      final result = await processDriverMiddlewares(
-        logEntry: entry,
-        driverName: 'testDriver',
-        globalMiddlewares: asyncMiddleware,
-      );
-
-      expect(result?.value, equals('Initial message [Async]'));
-    });
-  });
 }
 
 /// A middleware that simulates an asynchronous modify action.
@@ -172,7 +49,179 @@ class AsyncModifyMiddleware extends DriverMiddleware {
   FutureOr<DriverMiddlewareResult> handle(
       String driverName, LogEntry entry) async {
     await Future.delayed(Duration(milliseconds: 50)); // Simulate async delay
-    final modifiedMessage = '${entry.value}$appendText';
-    return DriverMiddlewareResult.modify(MapEntry(entry.key, modifiedMessage));
+    return DriverMiddlewareResult.modify(
+        entry.copyWith(message: '${entry.message}$appendText'));
   }
+}
+
+void main() {
+  group('Middleware Processor', () {
+    test('applies middlewares in correct order and handles actions', () async {
+      // Create a LogRecord
+      final record = LogRecord(
+        time: DateTime.now(),
+        level: Level.info,
+        message: 'Initial message',
+      );
+
+      // Create a LogEntry with the formatted message
+      final entry = LogEntry(record, 'Initial message');
+
+      final globalMiddleware = [
+        ModifyMiddleware(' [Global]'),
+      ];
+
+      final channelMiddleware = [
+        ModifyMiddleware(' [Channel]'),
+      ];
+
+      final driverMiddleware = [
+        ModifyMiddleware(' [Driver]'),
+      ];
+
+      final result = await processDriverMiddlewares(
+        entry: entry,
+        driverName: 'testDriver',
+        globalMiddlewares: globalMiddleware,
+        channelMiddlewares: channelMiddleware,
+        driverMiddlewares: driverMiddleware,
+      );
+
+      expect(
+        result?.message,
+        equals('Initial message [Global] [Channel] [Driver]'),
+      );
+    });
+
+    test('middleware can stop processing the log entry', () async {
+      final entry = LogEntry(
+        LogRecord(
+          level: Level.info,
+          message: 'Sensitive data',
+          time: DateTime.now(),
+        ),
+        'Sensitive data',
+      );
+
+      final stopMiddleware = [
+        StopMiddleware('Sensitive'),
+      ];
+
+      final result = await processDriverMiddlewares(
+        entry: entry,
+        driverName: 'testDriver',
+        globalMiddlewares: stopMiddleware,
+      );
+
+      expect(result, isNull); // Log entry should be discarded
+    });
+
+    test('modifications by middlewares are cumulative', () async {
+      final entry = LogEntry(
+        LogRecord(
+          level: Level.info,
+          message: 'Original message',
+          time: DateTime.now(),
+        ),
+        'Original message',
+      );
+
+      final middlewares = [
+        ModifyMiddleware(' [First]'),
+        ModifyMiddleware(' [Second]'),
+      ];
+
+      final result = await processDriverMiddlewares(
+        entry: entry,
+        driverName: 'testDriver',
+        globalMiddlewares: middlewares,
+      );
+
+      expect(result?.message, equals('Original message [First] [Second]'));
+    });
+
+    test('middleware processing stops after stop action', () async {
+      final entry = LogEntry(
+        LogRecord(
+          level: Level.info,
+          message: 'Message to stop',
+          time: DateTime.now(),
+        ),
+        'Message to stop',
+      );
+
+      final middlewares = [
+        ModifyMiddleware(' [Before Stop]'),
+        StopMiddleware('stop'),
+        ModifyMiddleware(' [After Stop]'),
+      ];
+
+      final result = await processDriverMiddlewares(
+        entry: entry,
+        driverName: 'testDriver',
+        globalMiddlewares: middlewares,
+      );
+
+      expect(result, isNull); // Log entry should be discarded
+    });
+
+    test(
+        'driver-specific middlewares are applied after global and channel middlewares',
+        () async {
+      final entry = LogEntry(
+        LogRecord(
+          level: Level.info,
+          message: 'Initial message',
+          time: DateTime.now(),
+        ),
+        'Initial message',
+      );
+
+      final globalMiddleware = [
+        ModifyMiddleware(' [Global]'),
+      ];
+
+      final channelMiddleware = [
+        ModifyMiddleware(' [Channel]'),
+      ];
+
+      final driverMiddleware = [
+        ModifyMiddleware(' [Driver]'),
+      ];
+
+      final result = await processDriverMiddlewares(
+        entry: entry,
+        driverName: 'testDriver',
+        globalMiddlewares: globalMiddleware,
+        channelMiddlewares: channelMiddleware,
+        driverMiddlewares: driverMiddleware,
+      );
+
+      expect(result?.message,
+          equals('Initial message [Global] [Channel] [Driver]'));
+    });
+
+    test('middleware can handle async operations', () async {
+      final entry = LogEntry(
+        LogRecord(
+          level: Level.info,
+          message: 'Initial message',
+          time: DateTime.now(),
+        ),
+        'Initial message',
+      );
+
+      final asyncMiddleware = [
+        AsyncModifyMiddleware(' [Async]'),
+      ];
+
+      final result = await processDriverMiddlewares(
+        entry: entry,
+        driverName: 'testDriver',
+        globalMiddlewares: asyncMiddleware,
+      );
+
+      expect(result?.message, equals('Initial message [Async]'));
+    });
+  });
 }

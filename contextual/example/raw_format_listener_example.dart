@@ -5,8 +5,9 @@ void main() {
   final logger = Logger(formatter: RawLogFormatter());
 
   // Set up a listener to handle log messages
-  logger.setListener((level, message, time) {
-    print('[$time] $level: $message');
+  logger.setListener((r) {
+    print(
+        '${r.message} ${r.record.level} ${r.record.message} ${r.record.time}');
   });
 
   // Log messages using the listener

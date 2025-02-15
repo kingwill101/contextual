@@ -1,5 +1,4 @@
-import 'package:contextual/src/driver/driver.dart';
-import 'package:contextual/src/driver/stack.dart';
+import 'package:contextual/contextual.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
@@ -18,7 +17,16 @@ void main() {
     });
 
     test('should log to all drivers', () async {
-      await stackDriver.log('Test message');
+      // Create a LogRecord and LogEntry
+      final record = LogRecord(
+        time: DateTime.now(),
+        level: Level.info,
+        message: 'Test message',
+        context: Context(),
+      );
+      final entry = LogEntry(record, 'Test message');
+
+      await stackDriver.log(entry);
       expect(testDriver1.logMessages, contains('Test message'));
       expect(testDriver2.logMessages, contains('Test message'));
     });
@@ -27,7 +35,17 @@ void main() {
       stackDriver =
           StackLogDriver([testDriver1, testDriver2], ignoreExceptions: true);
 
-      await stackDriver.log('Test message');
+      // Create a LogRecord and LogEntry
+      final record = LogRecord(
+        time: DateTime.now(),
+        level: Level.info,
+        message: 'Test message',
+        context: Context(),
+      );
+      final entry = LogEntry(record, 'Test message');
+
+      await stackDriver.log(entry);
+      expect(testDriver1.logMessages, contains('Test message'));
       expect(testDriver2.logMessages, contains('Test message'));
     });
   });
@@ -60,10 +78,12 @@ void main() {
 
       final testConfig = {
         'driver': 'test',
-        'key': 'value',
+        'config': {
+          'key': 'value',
+        }
       };
       loggerFactory.createDriver(testConfig);
-      expect(configPassed, equals(testConfig));
+      expect(configPassed, equals(testConfig.dot("config")));
     });
 
     test('multiple drivers can be registered and created', () {
@@ -96,7 +116,8 @@ class TestDriver extends LogDriver {
   TestDriver() : super("test");
 
   @override
-  Future<void> log(String formattedMessage) async {
-    logMessages.add(formattedMessage);
+  @override
+  Future<void> log(LogEntry entry) async {
+    logMessages.add(entry.message);
   }
 }

@@ -22,8 +22,11 @@ void main() {
 
     test('should format log messages in plain text', () {
       final context = Context.from({'key': 'value'});
-      final formattedMessage =
-          formatter.format(Level.info, 'Test message', context);
+      final formattedMessage = formatter.format(LogRecord(
+          time: DateTime.now(),
+          level: Level.info,
+          message: "Test message",
+          context: context));
       expect(formattedMessage, contains(Level.info));
       expect(formattedMessage, contains('Test message'));
       expect(formattedMessage, contains('Context:'));
@@ -44,8 +47,13 @@ void main() {
     });
     test('should format log messages in json', () {
       final context = Context.from({'key': 'value'});
-      final formattedMessage =
-          formatter.format(Level.info, 'Test message', context);
+      final formattedMessage = formatter.format(
+        LogRecord(
+            time: DateTime.now(),
+            level: Level.info,
+            message: "Test message",
+            context: context),
+      );
       //assert valid json
       expect(formattedMessage, isA<String>());
       expect(formattedMessage, isNotEmpty);
@@ -68,7 +76,11 @@ void main() {
     test('should return message as-is', () {
       final context = Context();
       final message = 'Raw message';
-      final formattedMessage = formatter.format(Level.info, message, context);
+      final formattedMessage = formatter.format(LogRecord(
+          time: DateTime.now(),
+          level: Level.info,
+          message: "Test message",
+          context: context));
       expect(formattedMessage, equals(message));
     });
   });
@@ -106,12 +118,6 @@ void main() {
       expect(formattedMessage, isA<String>());
       expect(formattedMessage, isNotEmpty);
 
-      // Verify the structure and content of the formatted message
-      final expectedMessage =
-          '{"user": {"name": "Alice", "age": 30}, "timestamp": "2023-10-01T12:34:56.000Z", '
-          '"location": {"latitude": 40.7128, "longitude": -74.006}, '
-          '"details": {"ip": "192.168.1.1", "devices": [laptop, mobile]}, '
-          '"success": true, "attempts": 3}';
       // expect(formattedMessage, equals(expectedMessage));
       expect(formattedMessage, contains('{"name": "Alice", "age": 30}'));
 

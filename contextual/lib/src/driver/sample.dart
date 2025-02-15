@@ -1,24 +1,50 @@
 import 'dart:math' as math;
 
 import 'package:contextual/src/driver/driver.dart';
+import 'package:contextual/src/log_entry.dart';
 import 'package:contextual/src/log_level.dart';
 
-/// A log driver that samples log messages based on configured sampling rates per log level.
+/// A log driver that samples log messages based on configured sampling rates.
 ///
-/// This driver wraps another [LogDriver] implementation and selectively forwards log messages
-/// based on a configured sampling rate for each log level. This can be used to reduce the
-/// volume of logs without completely disabling logging for certain levels.
+/// This driver reduces log volume by randomly sampling messages at different rates
+/// per log level. For example, you might want to log:
+/// * 100% of ERROR messages
+/// * 50% of WARNING messages
+/// * 10% of DEBUG messages
+///
+/// Example:
+/// ```dart
+/// final driver = SamplingLogDriver(
+///   ConsoleLogDriver(),
+///   samplingRates: {
+///     Level.error: 1.0,    // Log all errors
+///     Level.warning: 0.5,  // Log 50% of warnings
+///     Level.debug: 0.1,    // Log 10% of debug messages
+///   },
+/// );
+/// ```
+///
+/// Log levels not specified in [samplingRates] are logged at 100% (no sampling).
+/// Sampling rates should be between 0.0 (log nothing) and 1.0 (log everything).
 class SamplingLogDriver extends LogDriver {
+  /// The underlying driver that actually writes the logs
   final LogDriver wrappedDriver;
-  final Map<String, double> samplingRates; // Sampling rates per log level
+
+  /// Sampling rates per log level, between 0.0 and 1.0
+  final Map<Level, double> samplingRates;
+
+  /// Random number generator for sampling decisions
   final math.Random _random = math.Random();
 
-  /// Constructs a new [SamplingLogDriver] that wraps the provided [wrappedDriver] and applies
-  /// the specified [samplingRates] to log messages.
+  /// Creates a sampling log driver that wraps another driver.
   ///
-  /// The [samplingRates] map should contain the sampling rate (between 0.0 and 1.0) for each
-  /// log level that should be sampled. Any log levels not specified in the map will be logged
-  /// at 100% (no sampling).
+  /// The [wrappedDriver] is the underlying driver that will receive sampled logs.
+  /// The [samplingRates] map specifies the sampling rate for each log level.
+  ///
+  /// Sampling rates must be between 0.0 and 1.0, where:
+  /// * 0.0 means never log messages at this level
+  /// * 1.0 means always log messages at this level
+  /// * 0.5 means log approximately half of the messages at this level
   SamplingLogDriver(this.wrappedDriver, {required this.samplingRates})
       : super("sampling");
 
@@ -30,23 +56,14 @@ class SamplingLogDriver extends LogDriver {
   /// and the message is only forwarded to the wrapped log driver if the sample is within the
   /// configured rate. Otherwise, the message is skipped and a message is printed indicating
   /// that the log was sampled out.
-  Future<void> log(String formattedMessage) async {
-    final Level = _extractLevel(formattedMessage);
+  Future<void> log(LogEntry entry) async {
+    final level = entry.record.level;
 
     // If no sampling rate is specified for this level, default to 100% logging
-    final sampleRate = samplingRates[Level] ?? 1.0;
+    final sampleRate = samplingRates[level] ?? 1.0;
 
     if (_random.nextDouble() < sampleRate) {
-      await wrappedDriver
-          .log(formattedMessage); // Forward log if within sample rate
-    } else {
-      print('[Sampled Out] Skipping log for level: $Level');
+      await wrappedDriver.log(entry); // Forward log if within sample rate
     }
-  }
-
-  String _extractLevel(String formattedMessage) {
-    final regex = RegExp(r'\[(.*?)\]');
-    final match = regex.firstMatch(formattedMessage);
-    return match?.group(1)?.toLowerCase() ?? Level.info.toLowerCase();
   }
 }

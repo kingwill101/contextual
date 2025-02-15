@@ -1,52 +1,73 @@
 import 'package:contextual/src/driver/driver.dart';
+import 'package:contextual/src/log_entry.dart';
 import 'package:universal_io/io.dart';
 
-/// A [LogDriver] that writes log messages to a daily log file.
+/// A [LogDriver] that writes log messages to daily rotating log files.
 ///
-/// - [baseFilePath]: The base file path (e.g., 'logs/app') to which the
-///    date suffix will be appended. The final file would look like
-///    "logs/app-2025-01-15.log" for logs created on January 15, 2025.
-/// - [retentionDays]: The number of days to keep log files. Older files
-///    are automatically deleted during log operations.
+/// This driver creates a new log file each day and automatically manages log file
+/// retention. Log files are named using the pattern `{baseFilePath}-YYYY-MM-DD.log`.
+///
+/// Features:
+/// * Daily log file rotation
+/// * Automatic cleanup of old log files
+/// * Configurable retention period
+/// * Creates log directories if they don't exist
+///
+/// Example:
+/// ```dart
+/// final driver = DailyFileLogDriver(
+///   'logs/app',
+///   retentionDays: 30,
+/// );
+/// ```
+///
+/// The above example creates log files like:
+/// * logs/app-2024-02-15.log
+/// * logs/app-2024-02-14.log
+/// * etc.
 class DailyFileLogDriver extends LogDriver {
+  /// Base path for log files, without date suffix or extension
   final String baseFilePath;
+
+  /// Number of days to keep log files before deletion
   final int retentionDays;
 
+  /// Creates a daily file log driver that writes to [baseFilePath]-YYYY-MM-DD.log
+  ///
+  /// The [retentionDays] parameter controls how long log files are kept before
+  /// being automatically deleted. Defaults to 14 days.
   DailyFileLogDriver(this.baseFilePath, {this.retentionDays = 14})
       : super("file") {
-    // Optional: Initial cleanup on driver creation
     _cleanupOldFiles();
   }
 
   @override
-  Future<void> log(String formattedMessage) async {
-    // 1. Determine the current date's suffix (e.g., '2025-01-15')
+  Future<void> log(LogEntry entry) async {
+    final formattedMessage = entry.message.toString();
     final dateSuffix = DateTime.now().toIso8601String().split('T').first;
-    // 2. Create the full file path (e.g., 'logs/app-2025-01-15.log')
     final filePath = '$baseFilePath-$dateSuffix.log';
     final file = File(filePath);
 
-    // 3. Create the file if it doesn't exist
-    if (!file.existsSync()) {
-      file.createSync(recursive: true);
+    if (!await file.exists()) {
+      await file.create(recursive: true);
     }
 
-    // 4. Append the log message
-    file.writeAsStringSync('$formattedMessage\n', mode: FileMode.append);
-
-    // 5. (Optional) Trigger cleanup to remove old files
+    await file.writeAsString('$formattedMessage\n', mode: FileMode.append);
     _cleanupOldFiles();
   }
 
-  /// Removes log files older than [retentionDays].
+  /// Removes log files that are older than [retentionDays].
   ///
-  /// This method checks all files matching the pattern
-  /// `$baseFilePath-YYYY-MM-DD.log` in the same directory as [baseFilePath]
-  /// and deletes those older than the retention period.
+  /// This method:
+  /// 1. Scans the log directory for files matching the naming pattern
+  /// 2. Extracts the date from each file name
+  /// 3. Deletes files whose dates are older than [retentionDays]
+  ///
+  /// File deletion errors are silently ignored to prevent disruption of logging.
   void _cleanupOldFiles() {
     final logDir = File(baseFilePath).parent;
     if (!logDir.existsSync()) {
-      return; // If the directory doesn't exist, nothing to do.
+      return;
     }
 
     final now = DateTime.now();
@@ -54,27 +75,20 @@ class DailyFileLogDriver extends LogDriver {
 
     for (final file in files) {
       final filename = file.path.split(Platform.pathSeparator).last;
-
-      // Check if the file matches our log pattern (e.g., app-2025-01-15.log).
-      // You might need to adjust this regex based on your actual naming structure.
       final regex = RegExp(r'^(.+)-(\d{4}-\d{2}-\d{2})\.log$');
       final match = regex.firstMatch(filename);
 
       if (match != null) {
-        // Extract the date part from the filename
         final datePart = match.group(2);
         if (datePart != null) {
           final fileDate = DateTime.tryParse(datePart);
           if (fileDate != null) {
-            // Calculate how old this file is
             final difference = now.difference(fileDate).inDays;
-            // Delete if older than retention
             if (difference >= retentionDays) {
               try {
                 file.deleteSync();
-                // (Optional) print or log that we removed an old file
               } catch (e) {
-                // Handle file delete exception if needed
+                // Silently ignore deletion errors
               }
             }
           }

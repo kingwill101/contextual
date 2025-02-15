@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'package:contextual/src/driver/sample.dart';
 import 'package:contextual/src/format/null.dart';
+import 'package:contextual/src/log_entry.dart';
+import 'package:contextual/src/record.dart';
 import 'package:contextual/src/types.dart';
+import 'package:contextual/src/util.dart';
 
 import 'abstract_logger.dart';
 import 'config.dart';
@@ -30,7 +34,7 @@ import 'sink.dart';
 /// log level, the log message, and the timestamp of the log entry.
 ///
 /// This can be used to implement custom logging sinks or integrations.
-typedef LogListener = void Function(Level level, String message, DateTime time);
+typedef LogListener = void Function(LogEntry entry);
 
 /// A configurable logging system with support for multiple output channels.
 ///
@@ -395,9 +399,11 @@ class Logger extends AbstractLogger {
   /// Sets up the built-in drivers with their default configurations:
   /// - console: Terminal output with optional coloring
   /// - emergency: Daily rotating emergency log files
+  /// - 'sample': Sample log driver for testing
   /// - daily: Daily rotating general log files
   /// - webhook: HTTP webhook integration
   /// - stack: In-memory log stack
+  // logger.dart
   void _registerDefaultDrivers() {
     _driverFactory.registerDriver('console', (config) => ConsoleLogDriver());
     _driverFactory.registerDriver('emergency',
@@ -411,10 +417,43 @@ class Logger extends AbstractLogger {
     _driverFactory.registerDriver(
         'webhook',
         (config) => WebhookLogDriver(
-              Uri.parse(config['webhookUrl']),
-              username: config['username'],
-              emoji: config['emoji'],
+              Uri.parse(config['url']),
             ));
+
+    // Register the 'sampling' driver
+    _driverFactory.registerDriver('sampling', (config) {
+      var rates = config['sample_rates'] as Map<String, dynamic>;
+      Map<Level, double> samplingRates = {};
+      for (final entry in rates.entries) {
+        final level =
+            Level.values.where((l) => l.name == entry.key).firstOrNull;
+        if (level == null) {
+          throw ArgumentError("Invalid log level level: $level");
+        }
+        samplingRates[level] = entry.value;
+      }
+
+      // Create the wrapped driver
+      final wrappedDriverConfig = config.dot("wrapped_driver", {});
+      if (wrappedDriverConfig == null) {
+        throw ArgumentError(
+            "Missing 'wrapped_driver' in 'sampling' driver configuration");
+      }
+      if (!wrappedDriverConfig.containsKey("driver")) {
+        throw ArgumentError(
+            "Missing 'driver' in 'wrapped_driver' configuration");
+      }
+
+      final wrappedDriver = _driverFactory
+          .createDriver(wrappedDriverConfig as Map<String, dynamic>);
+
+      // Return the SamplingLogDriver instance
+      return SamplingLogDriver(
+        wrappedDriver,
+        samplingRates: samplingRates,
+      );
+    });
+
     _driverFactory.registerDriver('stack', (config) {
       final channelsList = (config['channels'] as List).cast<String>();
       final drivers = channelsList
@@ -423,7 +462,7 @@ class Logger extends AbstractLogger {
           .toList();
       return StackLogDriver(
         drivers,
-        ignoreExceptions: config['ignoreExceptions'] ?? false,
+        ignoreExceptions: config['ignore_exceptions'] ?? false,
       );
     });
   }
@@ -439,51 +478,48 @@ class Logger extends AbstractLogger {
       return;
     }
 
-    _config?.channels.forEach((name, channelConfig) {
-      final mergedConfig = {..._config!.defaults, ...channelConfig.toJson()};
-      if (channelConfig.env == 'all' || channelConfig.env == _environment) {
-        // Create the driver using the driver factory
-        final driver = _driverFactory.createDriver(mergedConfig);
-
-        // Check if a formatter is specified in the config
-        LogMessageFormatter? formatter;
-        if (mergedConfig.containsKey('formatter')) {
-          final formatterName = mergedConfig['formatter'];
-          final formatterBuilder = _formatterFactory[formatterName];
-          if (formatterBuilder != null) {
-            formatter = formatterBuilder();
-          } else {
-            throw ArgumentError('Unsupported formatter: $formatterName');
-          }
-        }
-
-        // Add the driver with the optional formatter
-        addChannel(name, driver, formatter: formatter);
-      }
+    final stackChannels = _config!.channels.keys.where((channelKey) {
+      return _config!.channels[channelKey]?.driver == 'stack';
     });
+
+    final otherChannels = _config!.channels.keys.where((channelKey) {
+      return !stackChannels.contains(channelKey);
+    });
+
+    for (final channelKey in otherChannels) {
+      enumerateChannel(channelKey, _config!.channels[channelKey]!);
+    }
+    for (final channelKey in stackChannels) {
+      enumerateChannel(channelKey, _config!.channels[channelKey]!);
+    }
   }
 
-  /// Formats a message using the appropriate formatter.
-  ///
-  /// Selects between type-specific formatters and the default formatter
-  /// based on the message type.
-  ///
-  /// Parameters:
-  /// - [level]: Log level for the message
-  /// - [message]: The message object to format
-  /// - [context]: Current logging context
-  /// - [channelName]: The name of the channel being logged to
-  ///
-  /// Returns the formatted message string.
-  String _formatMessage(
-      Level level, Object message, Context context, String channelName) {
-    // Use the channel-specific formatter if it exists, otherwise use the default formatter
-    final formatter = _channelFormatters[channelName] ?? _formatter;
-    final typeFormatter = _typeFormatters[message.runtimeType];
-    if (typeFormatter != null) {
-      return typeFormatter.format(level, message, context);
+  void enumerateChannel(String name, ChannelConfig channelConfig) {
+    final mergedConfig = {..._config!.defaults, ...channelConfig.toJson()};
+    final channelInfo = {
+      'name': name,
+      'driver': channelConfig.driver,
+      'config': {...mergedConfig, ...channelConfig.config}
+    };
+    if (channelConfig.env == 'all' || channelConfig.env == _environment) {
+      // Create the driver using the driver factory
+      final driver = _driverFactory.createDriver(channelInfo);
+
+      // Check if a formatter is specified in the config
+      LogMessageFormatter? formatter;
+      if (mergedConfig.containsKey('formatter')) {
+        final formatterName = mergedConfig['formatter'];
+        final formatterBuilder = _formatterFactory[formatterName];
+        if (formatterBuilder != null) {
+          formatter = formatterBuilder();
+        } else {
+          throw ArgumentError('Unsupported formatter: $formatterName');
+        }
+      }
+
+      // Add the driver with the optional formatter
+      addChannel(name, driver, formatter: formatter);
     }
-    return formatter.format(level, message.toString(), context);
   }
 
   /// Logs a message with the specified level and optional context.
@@ -499,10 +535,10 @@ class Logger extends AbstractLogger {
   /// Throws ArgumentError if the log level is invalid.
   ///
   /// Example:
-  /// ```dart
+  ///
   /// await logger.log('error', 'Database connection failed',
   ///   Context({'attempt': 3, 'database': 'users'}));
-  /// ```
+  ///
   @override
   Future<void> log(Level level, dynamic message, [Context? context]) async {
     context ??= Context();
@@ -514,11 +550,17 @@ class Logger extends AbstractLogger {
       combinedContext.addAll(middleware());
     }
 
-    final timestamp = DateTime.now();
+    final record = LogRecord(
+      time: DateTime.now(),
+      level: level,
+      message: message.toString(),
+      context: combinedContext,
+      stackTrace: StackTrace.current,
+    );
 
     final selectedChannels = _targetChannels ?? _channels.keys.toSet();
-
     final uniqueDrivers = <String, LogDriver>{};
+
     for (final channel in selectedChannels) {
       final driver = _channels[channel];
       if (driver != null) {
@@ -534,41 +576,54 @@ class Logger extends AbstractLogger {
         driver.setMiddlewares(_driverMiddlewares, _channelMiddlewares);
       }
 
-      // Use the channel-specific formatter if available
-      final formattedMessage =
-          _formatMessage(level, message, combinedContext, channelName);
+      String formattedMessage = _formatRecord(record, channelName);
 
-      // Gather middlewares
-      final globalMiddlewares = _globalMiddlewares;
-      final channelMiddlewares = _channelMiddlewares[channelName] ?? [];
-      final driverName = driver.runtimeType.toString();
-      final driverMiddlewares = _driverMiddlewares[driverName] ?? [];
-
-      // Process the log entry through the middlewares
-      var driverLogEntry = await processDriverMiddlewares(
-        logEntry: MapEntry(level, formattedMessage),
+      final modifiedMessage = await processDriverMiddlewares(
+        entry: LogEntry(record, formattedMessage),
         driverName: channelName,
-        globalMiddlewares: globalMiddlewares,
-        channelMiddlewares: channelMiddlewares,
-        driverMiddlewares: driverMiddlewares,
+        globalMiddlewares: _globalMiddlewares,
+        channelMiddlewares: _channelMiddlewares[channelName] ?? [],
+        driverMiddlewares:
+            _driverMiddlewares[driver.runtimeType.toString()] ?? [],
       );
 
-      if (driverLogEntry == null) continue; // Log has been filtered out
+      if (modifiedMessage == null) continue; // Log has been filtered out
 
-      // If listener is set, use it instead of the sink
+      final logEntry = LogEntry(record, formattedMessage);
+
       if (_listener != null) {
-        _listener!(driverLogEntry.key, driverLogEntry.value, timestamp);
-        continue;
+        _listener!(logEntry);
       } else {
-        // Add the log to the sink for asynchronous processing
-        await _logSink.addLog(level, () async {
-          await driver.log(driverLogEntry.value);
+        await _logSink.addLog(logEntry, (entry) async {
+          await driver.log(entry);
         });
       }
     }
 
-    // Reset target channels
     _targetChannels = null;
+  }
+
+  /// Formats a message using the appropriate formatter.
+  ///
+  /// Selects between type-specific formatters and the default formatter
+  /// based on the message type.
+  ///
+  /// Parameters:
+  /// - [level]: Log level for the message
+  /// - [message]: The message object to format
+  /// - [context]: Current logging context
+  /// - [channelName]: The name of the channel being logged to
+  ///
+  /// Returns the formatted message string.
+  String _formatRecord(LogRecord record, String channelName) {
+    final formatter = _channelFormatters[channelName] ?? _formatter;
+    final typeFormatter = _typeFormatters[record.message.runtimeType];
+
+    if (typeFormatter != null) {
+      return typeFormatter.format(record.level, record.message, record.context);
+    }
+
+    return formatter.format(record);
   }
 
   /// Shuts down the logger and flushes any pending logs.

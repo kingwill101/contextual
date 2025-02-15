@@ -1,43 +1,70 @@
-import 'package:contextual/src/log_level.dart';
-
+import '../record.dart';
 import '../context.dart';
-import '../util.dart';
 import 'message_formatter.dart';
+import '../util.dart';
 
-/// A [LogMessageFormatter] implementation that formats log messages in a plain text format.
+/// A formatter that outputs log messages in a simple, unformatted text format.
+///
+/// This formatter produces plain text output without any special formatting or
+/// colors, making it suitable for file logging or environments where ANSI
+/// colors aren't supported.
+///
+/// The output format is:
+/// ```
+/// [2024-02-15 10:30:45.123] [INFO] [prefix] Message | Context: {key: value}
+/// ```
+///
+/// Components (all optional based on settings):
+/// * Timestamp in brackets
+/// * Log level in brackets
+/// * Prefix in brackets (if present in context)
+/// * Message text
+/// * Context data after a pipe symbol (if present)
+///
+/// Example outputs:
+/// ```
+/// [2024-02-15 10:30:45.123] [INFO] User logged in
+/// [2024-02-15 10:30:45.123] [ERROR] [auth] Login failed | Context: {attempts: 3}
+/// ```
+///
+/// This formatter is ideal for:
+/// * Log files
+/// * System logs
+/// * Environments without ANSI color support
+/// * Machine parsing with simple text tools
 class PlainTextLogFormatter extends LogMessageFormatter {
-  PlainTextLogFormatter({
-    super.settings,
-  });
+  /// Creates a plain text formatter with the specified settings.
+  ///
+  /// Uses [FormatterSettings] to control which components are included
+  /// in the output.
+  PlainTextLogFormatter({super.settings});
 
   @override
-  String format(Level level, String message, Context context) {
-    final contextData =
-        settings.includeHidden ? context.all() : context.visible();
+  String format(LogRecord record) {
+    final contextData = settings.includeHidden
+        ? record.context.all()
+        : record.context.visible();
+
     final formattedMessage =
-        interpolateMessage(message, Context.from(contextData));
+        interpolateMessage(record.message, Context.from(contextData));
 
     StringBuffer buffer = StringBuffer();
 
-    // Include timestamp if enabled
     if (settings.includeTimestamp) {
-      final timestamp = settings.timestampFormat.format(DateTime.now());
+      final timestamp = settings.timestampFormat.format(record.time);
       buffer.write('[$timestamp] ');
     }
 
-    // Include log level if enabled
     if (settings.includeLevel) {
-      buffer.write('[$level] ');
+      buffer.write('[${record.level}] ');
     }
 
-    // Include prefix if enabled and present
-    if (settings.includePrefix && context.has('prefix')) {
-      buffer.write('[${context.get('prefix')}] ');
+    if (settings.includePrefix && record.context.has('prefix')) {
+      buffer.write('[${record.context.get('prefix')}] ');
     }
 
     buffer.write(formattedMessage);
 
-    // Include context data if enabled
     if (settings.includeContext && contextData.isNotEmpty) {
       buffer.write(' | Context: ${contextData.toString()}');
     }

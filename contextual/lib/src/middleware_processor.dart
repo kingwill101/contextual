@@ -1,30 +1,31 @@
-import 'package:contextual/src/middleware.dart';
-import 'package:contextual/src/types.dart';
+import 'dart:async';
+import 'middleware.dart';
+import 'log_entry.dart';
 
 /// Processes a middleware chain for a specific driver and channel.
 ///
-/// Returns null if the middleware chain indicates processing should stop,
-/// otherwise returns the modified log entry.
+/// Returns `null` if processing should stop; otherwise, returns the potentially modified [LogEntry].
 Future<LogEntry?> processDriverMiddlewares({
-  required LogEntry logEntry,
+  required LogEntry entry,
   required String driverName,
   List<DriverMiddleware> globalMiddlewares = const [],
   List<DriverMiddleware> channelMiddlewares = const [],
   List<DriverMiddleware> driverMiddlewares = const [],
 }) async {
-  var currentEntry = logEntry;
+  var currentEntry = entry;
 
-  // Apply global middlewares first
+  // Apply global middlewares first.
   for (var middleware in globalMiddlewares) {
     final result = await middleware.handle(driverName, currentEntry);
     if (result.action == DriverMiddlewareAction.stop) {
-      return null;
+      return null; // Stop processing.
     } else if (result.action == DriverMiddlewareAction.modify) {
       currentEntry = result.modifiedEntry!;
     }
+    // If action is proceed, continue without changes.
   }
 
-  // Apply channel-specific middlewares next
+  // Apply channel-specific middlewares next.
   for (var middleware in channelMiddlewares) {
     final result = await middleware.handle(driverName, currentEntry);
     if (result.action == DriverMiddlewareAction.stop) {
@@ -34,7 +35,7 @@ Future<LogEntry?> processDriverMiddlewares({
     }
   }
 
-  // Then apply driver-specific middlewares
+  // Apply driver-specific middlewares last.
   for (var middleware in driverMiddlewares) {
     final result = await middleware.handle(driverName, currentEntry);
     if (result.action == DriverMiddlewareAction.stop) {

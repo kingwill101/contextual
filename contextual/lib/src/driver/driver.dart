@@ -1,4 +1,7 @@
 import 'package:contextual/src/types.dart';
+import 'package:contextual/src/util.dart';
+
+import '../log_entry.dart';
 
 /// Defines an interface for a log driver that can be used to log messages.
 ///
@@ -10,8 +13,8 @@ abstract class LogDriver {
 
   LogDriver(this.name);
 
-  /// Logs the provided [formattedMessage] using the driver's implementation
-  Future<void> log(String formattedMessage);
+  /// Logs the provided [entry] using the driver's implementation
+  Future<void> log(LogEntry entry);
 }
 
 /// Provides a factory for creating instances of [LogDriver] based on configuration.
@@ -48,10 +51,14 @@ class LogDriverFactory {
   /// implementation and return it. If the specified log driver type is not
   /// registered, this method will throw an [ArgumentError].
   LogDriver createDriver(Map<String, dynamic> config) {
-    final driverType = config['driver'];
+    if (config.dot("driver") == null) {
+      throw ArgumentError("driver property is missing");
+    }
+
+    final driverType = config['driver']!;
     final builder = _registeredDrivers[driverType];
     if (builder != null) {
-      return builder(config);
+      return builder(config.dot("config", {})!);
     }
     throw ArgumentError(
         'Unsupported driver type: $driverType supported types: ${_registeredDrivers.keys}');
