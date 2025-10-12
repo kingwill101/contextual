@@ -49,6 +49,9 @@ You can also target drivers by type:
 
 ```dart
 logger.forDriver<ConsoleLogDriver>().info('Only console drivers');
+
+// Add driver-specific middleware without naming the driver
+logger.addDriverMiddleware<ConsoleLogDriver>(SensitiveDataFilter());
 ```
 
 ### LogDriver
