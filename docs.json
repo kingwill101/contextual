@@ -16,21 +16,22 @@
     {
       "group": "API",
       "pages": [
-        { "title": "Overview", "href": "api/overview" }
+        { "title": "Overview", "href": "/api/overview" },
+        { "title": "Driver Configuration", "href": "/api/drivers/configuration" }
       ]
     },
     {
       "group": "Drivers",
       "pages": [
-        { "title": "Daily File", "href": "drivers/daily-file" }
+        { "title": "Daily File", "href": "/drivers/daily-file" }
       ]
     },
     {
       "group": "Advanced",
       "pages": [
-        { "title": "Middleware", "href": "advanced/middleware" },
-        { "title": "Batching & Shutdown", "href": "advanced/batching-and-shutdown" },
-        { "title": "Shelf Integration", "href": "advanced/shelf-integration" }
+        { "title": "Middleware", "href": "/advanced/middleware" },
+        { "title": "Batching & Shutdown", "href": "/advanced/batching-and-shutdown" },
+        { "title": "Shelf Integration", "href": "/advanced/shelf-integration" }
       ]
     }
   ]

@@ -22,116 +22,21 @@ Or install it using the Dart package manager:
 dart pub add contextual
 ```
 
-## Basic Usage
-
-Here's a simple example to get you started:
+## Quick start
 
 ```dart
 import 'package:contextual/contextual.dart';
 
 void main() async {
-  // Create a logger with console output
   final logger = await Logger.create()
     ..addChannel('console', ConsoleLogDriver());
 
-  // Log some messages
   logger.info('Hello from Contextual!');
-  logger.warning('This is a warning message');
-  logger.error('Something went wrong', Context({
-    'error_code': 500,
-    'request_id': 'abc123'
-  }));
 }
 ```
 
-## Features
+## Next steps
 
-### Multiple Output Channels
-
-Contextual supports multiple output channels, allowing you to send logs to different destinations:
-
-```dart
-final logger = await Logger.create()
-  ..addChannel('console', ConsoleLogDriver())
-  ..addChannel('file', DailyFileLogDriver('logs/app.log'))
-  ..addChannel('webhook', WebhookLogDriver(Uri.parse('https://your-webhook.com')));
-```
-
-### Daily Rotating File Logs
-
-The `DailyFileLogDriver` automatically rotates log files daily and manages retention:
-
-```dart
-final logger = await Logger.create()
-  ..addChannel(
-    'file',
-    DailyFileLogDriver(
-      'logs/app',
-      retentionDays: 30,
-      flushInterval: Duration(seconds: 1),
-    ),
-  );
-```
-
-### Rich Context
-
-Add context to your logs for better debugging and tracing:
-
-```dart
-logger.withContext({
-  'environment': 'production',
-  'version': '1.0.0',
-})..info('Application started');
-
-// Add request-specific context
-logger.info(
-  'Processing request',
-  Context({
-    'request_id': 'req123',
-    'user_id': 'user456',
-    'path': '/api/users'
-  })
-);
-```
-
-### Log Formatting
-
-Customize how your logs are formatted:
-
-```dart
-final logger = await Logger.create(
-  formatter: JsonLogFormatter(), // or PrettyLogFormatter(), PlainTextLogFormatter()
-)..addChannel('console', ConsoleLogDriver());
-```
-
-### Log Levels
-
-Contextual supports multiple log levels:
-
-```dart
-logger.debug('Debug message');
-logger.info('Info message');
-logger.notice('Notice message');
-logger.warning('Warning message');
-logger.error('Error message');
-logger.critical('Critical message');
-logger.alert('Alert message');
-logger.emergency('Emergency message');
-```
-
-### Middleware Support
-
-Add middleware to transform or filter logs:
-
-```dart
-logger.addMiddleware(() => {
-  'timestamp': DateTime.now().toIso8601String(),
-  'hostname': Platform.hostname,
-});
-```
-
-## Next Steps
-
-- Check out the [API Reference](./api/overview) for detailed documentation
-- Learn about [Advanced Features](./advanced/middleware)
-- Explore [Driver Guides](./drivers/daily-file) for configuration and usage examples
+- API overview: [API Reference](./api/overview)
+- Advanced topics: [Middleware](./advanced/middleware) · [Batching & shutdown](./advanced/batching-and-shutdown)
+- Drivers: [Daily file](./drivers/daily-file) · [Driver configuration](./api/drivers/configuration)

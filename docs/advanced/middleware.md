@@ -1,5 +1,4 @@
 # Middleware
-# Middleware
 
 Middleware allows transforming or filtering log entries before they reach a driver.
 
