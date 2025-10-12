@@ -84,7 +84,6 @@ final config = TypedLogConfig(
 final logger = await Logger.create(typedConfig: config);
 ```
 
-}
 ```
 
 Note: Console-only logging setups don't require explicit shutdown, but it's still good practice to include it.
