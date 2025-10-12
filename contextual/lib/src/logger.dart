@@ -5,10 +5,11 @@ import 'package:contextual/src/format/null.dart';
 import 'package:contextual/src/log_entry.dart';
 import 'package:contextual/src/record.dart';
 import 'package:contextual/src/types.dart';
-import 'package:contextual/src/util.dart';
+
 
 import 'abstract_logger.dart';
-import 'config.dart';
+import 'channel.dart';
+
 import 'context.dart';
 import 'context_middleware.dart';
 import 'driver/console.dart';
@@ -18,6 +19,9 @@ import 'driver/stack.dart';
 import 'driver/webhook.dart';
 import 'format/formatter_settings.dart';
 import 'format/json.dart';
+
+import 'typed/typed_channel.dart' as typed_channels;
+import 'typed/log_config.dart' show TypedLogConfig;
 import 'format/message_formatter.dart';
 import 'format/plain.dart';
 import 'format/pretty.dart';
@@ -75,19 +79,16 @@ typedef LogListener = void Function(LogEntry entry);
 class Logger extends AbstractLogger {
   /// Map of channel names to their corresponding log drivers.
   /// Each channel represents a distinct logging destination.
-  final Map<String, LogDriver> _channels = {};
+  final List<Channel<LogDriver>> _channels = [];
 
-  /// Driver-specific middlewares mapped by driver name.
-  /// Each driver can have its own middleware chain for processing logs.
-  final Map<String, List<DriverMiddleware>> _driverMiddlewares = {};
-
-  /// Channel-specific middlewares mapped by channel name.
-  /// Each channel can have its own middleware chain for processing logs.
-  final Map<String, List<DriverMiddleware>> _channelMiddlewares = {};
+  
 
   /// Global middlewares applied to all drivers.
   /// These run before any driver-specific middlewares.
   final List<DriverMiddleware> _globalMiddlewares = [];
+  /// Driver-specific middlewares mapped by driver type.
+  final Map<Type, List<DriverMiddleware>> _driverTypeMiddlewares = {};
+
 
   /// Middleware for modifying context data.
   /// Executed before each log operation to enrich context.
@@ -100,35 +101,22 @@ class Logger extends AbstractLogger {
   /// Maintains application-wide contextual information.
   final Context _sharedContext = Context();
 
-  /// Factory for creating log drivers.
-  /// Handles instantiation of built-in and custom drivers.
-  final LogDriverFactory _driverFactory = LogDriverFactory();
+  // Legacy driver factory removed in v2 (typed configuration path).
 
   /// Type-specific formatters for custom log message formatting.
   /// Enables specialized formatting for different object types.
   final Map<Type, LogTypeFormatter> _typeFormatters = {};
 
-  /// Current environment (e.g., development, production).
-  /// Used for environment-specific logging configuration.
-  String _environment;
 
-  /// Logger configuration.
-  /// Contains channel definitions and default settings.
-  LogConfig? _config;
-
-  /// Whether to use the sink for logging
-  final bool useSink;
-
-  /// Log sink for batching and async processing of logs.
-  /// Only initialized if [useSink] is true.
-  LogSink? _logSink;
+  /// Current environment (e.g., development, production). Used for typed config.
+  // ignore: unused_field
+  String _environment = 'production';
 
   /// Currently targeted channels for logging.
   /// Used for temporary channel selection in logging operations.
   Set<String>? _targetChannels;
 
-  /// Map to store per-channel formatters.
-  final Map<String, LogMessageFormatter> _channelFormatters = {};
+  
 
   /// Map to store registered formatter builders.
   final Map<String, LogMessageFormatterBuilder> _formatterFactory = {};
@@ -139,8 +127,61 @@ class Logger extends AbstractLogger {
   /// Indicates whether the default `console` channel is enabled.
   final bool defaultChannelEnabled;
 
-  /// Optional listener for log entries.
-  LogListener? _listener;
+  // Registry keyed by driver type and optional name for O(1) type-based selection
+  final Map<Type, Map<String?, String>> _typeRegistry = {};
+
+  final StreamController<LogEntry> _logController =
+      StreamController<LogEntry>.broadcast();
+
+  /// Exposes a broadcast stream of log entries.
+  Stream<LogEntry> get onRecord => _logController.stream;
+
+  /// The isolate-based log sink for batching logs (if enabled).
+  Sink? _logSink;
+
+  /// Whether to use isolate-based sink mode
+  final bool _useIsolateSink;
+
+  /// Configuration for the log sink
+  final LogSinkConfig? _sinkConfig;
+
+  /// Enables centralized batching for driver dispatch using LogSink.
+  /// Returns this logger for chaining.
+  Future<Logger> enableDriverBatching({LogSinkConfig? config}) async {
+    _logSink ??= LogSink(config: config ?? _sinkConfig);
+    return this;
+  }
+
+  /// Disables centralized batching and flushes any pending logs.
+  /// Returns this logger for chaining.
+  Future<Logger> disableDriverBatching() async {
+    if (_logSink != null) {
+      final sink = _logSink;
+      _logSink = null;
+      await sink!.close();
+    }
+    return this;
+  }
+
+  /// Creates a new logger with default settings.
+  ///
+  /// This is a convenience constructor that internally uses [create].
+  /// For more control over the logger configuration, use [create] directly.
+  factory Logger({
+    String? environment,
+    LogMessageFormatter? formatter,
+    FormatterSettings? formatterSettings,
+    bool defaultChannelEnabled = true,
+  }) =>
+      Logger._(
+        environment: environment,
+        formatter: formatter,
+        formatterSettings: formatterSettings,
+        defaultChannelEnabled: defaultChannelEnabled,
+        useIsolate: false,
+        useIsolateSink: false,
+        sinkConfig: null,
+      );
 
   /// Sets the minimum log level. Messages below this level will be ignored.
   ///
@@ -169,45 +210,91 @@ class Logger extends AbstractLogger {
   /// Parameters:
   /// * [config] - Optional logging configuration
   /// * [environment] - Operating environment (default: "production")
-  /// * [sinkConfig] - Configuration for the log sink if [useSink] is true
   /// * [formatter] - Message formatter (default: PlainTextLogFormatter)
   /// * [formatterSettings] - Settings for the formatter
   /// * [defaultChannelEnabled] - Whether to enable the default console channel
-  /// * [useSink] - Whether to use the sink for logging (default: false)
+  /// * [useIsolate] - Whether to enable isolate-based processing (deprecated, use useIsolateSink)
+  /// * [useIsolateSink] - Whether to enable isolate-based sink mode
+  /// * [sinkConfig] - Configuration for the log sink when using isolate processing
   ///
   /// Example:
   /// ```dart
-  /// final logger = Logger(
+  /// final logger = await Logger.create(
   ///   environment: 'development',
   ///   formatter: JsonLogFormatter(),
-  ///   sinkConfig: LogSinkConfig(batchSize: 50),
-  ///   useSink: true,
+  ///   defaultChannelEnabled: true,
+  ///   useIsolateSink: true,
+  ///   sinkConfig: LogSinkConfig(
+  ///     batchSize: 50,
+  ///     flushInterval: Duration(seconds: 5),
+  ///     autoFlush: true,
+  ///   ),
   /// );
   /// ```
-  Logger(
-      {LogConfig? config,
-      String? environment,
-      LogSinkConfig? sinkConfig,
-      LogMessageFormatter? formatter,
-      FormatterSettings? formatterSettings,
-      this.defaultChannelEnabled = true,
-      this.useSink = false})
-      : _formatter = formatter ?? PlainTextLogFormatter(),
-        _environment = environment ?? "production" {
-    if (useSink) {
-      _logSink = LogSink(
-        batchSize: sinkConfig?.batchSize ?? 10,
-        autoFlushInterval:
-            sinkConfig?.flushInterval ?? const Duration(seconds: 1),
-        autoCloseAfter: sinkConfig?.autoFlush == false
-            ? Duration.zero
-            : const Duration(seconds: 1),
-      );
+  static Future<Logger> create({
+    TypedLogConfig? typedConfig,
+    String? environment,
+    LogMessageFormatter? formatter,
+    FormatterSettings? formatterSettings,
+    bool defaultChannelEnabled = true,
+    bool useIsolate = false,
+    bool useIsolateSink = false,
+    LogSinkConfig? sinkConfig,
+  }) async {
+    final logger = Logger._(
+      environment: environment,
+      formatter: formatter,
+      formatterSettings: formatterSettings,
+      defaultChannelEnabled: defaultChannelEnabled,
+      useIsolate: useIsolate,
+      useIsolateSink: useIsolateSink,
+      sinkConfig: sinkConfig,
+    );
+    await logger._initialize();
+
+    if (typedConfig != null) {
+      logger.typedConfig(typedConfig);
+      if (typedConfig.batching?.enabled == true) {
+        await logger.enableDriverBatching(
+          config: LogSinkConfig(
+            batchSize: typedConfig.batching!.batchSize,
+            flushInterval: typedConfig.batching!.flushInterval,
+            autoFlush: true,
+            maxRetries: 3,
+            autoCloseAfter: typedConfig.batching!.autoCloseAfter,
+          ),
+        );
+      }
     }
+
+    return logger;
+  }
+
+  Logger._({
+    String? environment,
+    LogMessageFormatter? formatter,
+    FormatterSettings? formatterSettings,
+    required this.defaultChannelEnabled,
+    required bool useIsolate,
+    required bool useIsolateSink,
+    LogSinkConfig? sinkConfig,
+  })  : _formatter = formatter ?? PlainTextLogFormatter(),
+        _environment = environment ?? "production",
+        _useIsolateSink = useIsolateSink,
+        _sinkConfig = sinkConfig {
     _registerDefaultDrivers();
     _registerBuiltInFormatters();
-    _config = config;
-    _loadConfig();
+  }
+
+
+  Future<void> _initialize() async {
+    if (_useIsolateSink) {
+      _logSink = LogSink(
+        config: _sinkConfig,
+      );
+    } else {
+      _logSink = null;
+    }
   }
 
   void _registerBuiltInFormatters() {
@@ -219,33 +306,68 @@ class Logger extends AbstractLogger {
     // Register any other built-in or custom formatters here
   }
 
-  /// Sets a listener for log entries. When set, this bypasses the sink
-  /// and directly sends logs to the listener.
-  ///
-  /// Only one listener can be active at a time. Setting a new listener
-  /// replaces any existing one.
-  Future<void> setListener(LogListener listener) async {
-    _listener = listener;
-    await _logSink?.close();
+  /// Legacy config removed in v2. Use typedConfig(TypedLogConfig) instead.
+  @Deprecated('Removed in v2. Use typedConfig(TypedLogConfig) instead.')
+  Logger legacyConfig(dynamic _) {
+    return this;
   }
 
-  /// Removes the current listener, reverting to sink-based logging.
-  void clearListener() {
-    _listener = null;
-  }
-
-  /// Sets the logger configuration and loads drivers.
-  ///
-  /// The configuration defines available channels and their settings.
-  /// This method will initialize all channels that match the current environment.
-  ///
-  /// Parameters:
-  /// - [config]: The configuration object containing channel definitions.
-  ///
-  /// Returns the Logger instance for method chaining.
-  Logger config(LogConfig config) {
-    _config = config;
-    _loadConfig();
+  // Overload: accept typed.LogConfig and enumerate typed channels directly
+  Logger typedConfig(TypedLogConfig config) {
+    // Clear existing
+    _channels.clear();
+    // Apply environment
+    _environment = config.environment;
+    // Level
+    if (config.level != null) {
+      final level = Level.values.firstWhere((l) => l.name == config.level,
+          orElse: () => Level.debug);
+      setLevel(level);
+    }
+    // Channels
+    for (final ch in config.channels) {
+      if (ch is typed_channels.ConsoleChannel) {
+        addChannel(ch.name ?? 'console', ConsoleLogDriver(),
+            formatter: ch.formatter);
+      } else if (ch is typed_channels.DailyFileChannel) {
+      } else if (ch is typed_channels.DailyFileChannel) {
+        addChannel(
+            ch.name ?? 'daily',
+            DailyFileLogDriver.fromOptions(ch.options),
+            formatter: ch.formatter);
+      } else if (ch is typed_channels.StackChannel) {
+        // Resolve channel names to existing drivers for the stack
+        final drivers = ch.options.channels
+            .map((n) => _channels.firstWhere(
+                  (c) => c.name == n,
+                  orElse: () => Channel(name: n, driver: ConsoleLogDriver()),
+                ).driver)
+            .whereType<LogDriver>()
+            .toList();
+        addChannel(
+          ch.name ?? 'stack',
+          StackLogDriver.fromOptions(drivers, ignoreExceptions: ch.options.ignoreExceptions),
+          formatter: ch.formatter,
+        );
+      } else if (ch is typed_channels.SamplingChannel) {
+        final wrapped = _channels.firstWhere(
+          (c) => c.name == ch.options.wrappedChannel,
+          orElse: () => Channel(name: ch.options.wrappedChannel, driver: ConsoleLogDriver()),
+        ).driver;
+        {
+          addChannel(
+            ch.name ?? 'sampling',
+            SamplingLogDriver.fromOptions(wrapped, ch.options.rates),
+            formatter: ch.formatter,
+          );
+        }
+      } else if (ch is typed_channels.WebhookChannel) {
+        addChannel(
+            ch.name ?? 'webhook',
+            WebhookLogDriver.fromOptions(ch.options),
+            formatter: ch.formatter);
+      }
+    }
     return this;
   }
 
@@ -290,6 +412,12 @@ class Logger extends AbstractLogger {
   ///   'requestId': generateRequestId(),
   ///   'userId': getCurrentUserId()
   /// });
+  void _registerType(String channelName, LogDriver driver) {
+    final t = driver.runtimeType;
+    final byName = _typeRegistry.putIfAbsent(t, () => {});
+    byName[channelName] = channelName;
+  }
+
   ///
   Logger addMiddleware(ContextMiddleware middleware) {
     _contextMiddlewares.add(middleware);
@@ -315,24 +443,19 @@ class Logger extends AbstractLogger {
     return this;
   }
 
-  /// Adds a middleware specific to a named driver.
-  ///
-  /// Driver-specific middlewares only affect logs sent to the specified driver type.
-  ///
-  /// Parameters:
-  /// - [driverName]: Name of the driver type to add middleware for.
-  /// - [middleware]: The middleware instance to add.
-  ///
-  /// Returns the Logger instance for method chaining.
+  /// Adds a middleware specific to a driver type.
   ///
   /// Example:
   ///
-  /// logger.addDriverMiddleware('ConsoleLogDriver', CustomMiddleware());
+  /// Example: logger.addDriverMiddleware&lt;ConsoleLogDriver&gt;(CustomMiddleware());
   ///
-  Logger addDriverMiddleware(String driverName, DriverMiddleware middleware) {
-    _driverMiddlewares.putIfAbsent(driverName, () => []).add(middleware);
+  /// Prefer this typed method over string-based registration.
+  Logger addDriverMiddleware<T extends LogDriver>(
+      DriverMiddleware middleware) {
+    _driverTypeMiddlewares.putIfAbsent(T, () => []).add(middleware);
     return this;
   }
+
 
   /// Adds a new log channel with the specified name, driver, optional formatter, and optional middlewares.
   ///
@@ -347,15 +470,16 @@ class Logger extends AbstractLogger {
   /// Returns the Logger instance for method chaining.
   Logger addChannel(String channelName, LogDriver driver,
       {LogMessageFormatter? formatter, List<DriverMiddleware>? middlewares}) {
-    _channels[channelName] = driver;
+    _channels.removeWhere((c) => c.name == channelName);
+    _channels.add(Channel<LogDriver>(
+      name: channelName,
+      driver: driver,
+      formatter: formatter,
+      middlewares: middlewares ?? const [],
+    ));
+    _registerType(channelName, driver);
 
-    if (formatter != null) {
-      _channelFormatters[channelName] = formatter;
-    }
-
-    if (middlewares != null) {
-      _channelMiddlewares[channelName] = middlewares;
-    }
+    // formatter and middlewares are stored in the Channel object now
 
     return this;
   }
@@ -363,6 +487,24 @@ class Logger extends AbstractLogger {
   /// Adds a type-specific formatter for custom object logging.
   ///
   /// Allows specialized formatting for specific object types.
+
+  /// Utility: check if a channel exists by name.
+  bool hasChannel(String name) => _channels.any((c) => c.name == name);
+
+  /// Utility: get a channel by name (null if missing).
+  Channel<LogDriver>? getChannel(String name) =>
+      _channels.cast<Channel<LogDriver>?>().firstWhere(
+            (c) => c?.name == name,
+            orElse: () => null,
+          );
+
+  /// Utility: remove a channel by name. Returns true if removed.
+  bool removeChannel(String name) {
+    final before = _channels.length;
+    _channels.removeWhere((c) => c.name == name);
+    return _channels.length < before;
+  }
+
   ///
   /// Parameters:
   /// - [formatter]: The type formatter instance to add.
@@ -382,7 +524,8 @@ class Logger extends AbstractLogger {
   ///
   /// Returns the constructed LogDriver instance.
   LogDriver buildChannel(Map<String, dynamic> config) {
-    return _driverFactory.createDriver(config);
+    // Legacy path removed; default to console driver for safety in v2
+    return ConsoleLogDriver();
   }
 
   /// Selects specific channels for the next log operation.
@@ -397,10 +540,11 @@ class Logger extends AbstractLogger {
   ///
   /// Example:
   ///
-  /// logger.to(['console', 'file']).info('Message');
+  /// logger['console'].info('Message');
+  /// logger['file'].info('Message');
   ///
-  Logger to(List<String> channels) {
-    _targetChannels = channels.toSet();
+  Logger operator [](String channelName) {
+    _targetChannels = {channelName};
     return this;
   }
 
@@ -436,124 +580,8 @@ class Logger extends AbstractLogger {
   /// - daily: Daily rotating general log files
   /// - webhook: HTTP webhook integration
   /// - stack: In-memory log stack
-  // logger.dart
-  void _registerDefaultDrivers() {
-    _driverFactory.registerDriver('console', (config) => ConsoleLogDriver());
-    _driverFactory.registerDriver('emergency',
-        (config) => DailyFileLogDriver('logs/emergency.log', retentionDays: 1));
-    _driverFactory.registerDriver(
-        'daily',
-        (config) => DailyFileLogDriver(
-              config['path'] ?? 'logs/default.log',
-              retentionDays: config['days'] ?? 14,
-            ));
-    _driverFactory.registerDriver(
-        'webhook',
-        (config) => WebhookLogDriver(
-              Uri.parse(config['url']),
-            ));
+  void _registerDefaultDrivers() {}
 
-    // Register the 'sampling' driver
-    _driverFactory.registerDriver('sampling', (config) {
-      var rates = config['sample_rates'] as Map<String, dynamic>;
-      Map<Level, double> samplingRates = {};
-      for (final entry in rates.entries) {
-        final level =
-            Level.values.where((l) => l.name == entry.key).firstOrNull;
-        if (level == null) {
-          throw ArgumentError("Invalid log level level: $level");
-        }
-        samplingRates[level] = entry.value;
-      }
-
-      // Create the wrapped driver
-      final wrappedDriverConfig = config.dot("wrapped_driver", {});
-      if (wrappedDriverConfig == null) {
-        throw ArgumentError(
-            "Missing 'wrapped_driver' in 'sampling' driver configuration");
-      }
-      if (!wrappedDriverConfig.containsKey("driver")) {
-        throw ArgumentError(
-            "Missing 'driver' in 'wrapped_driver' configuration");
-      }
-
-      final wrappedDriver = _driverFactory
-          .createDriver(wrappedDriverConfig as Map<String, dynamic>);
-
-      // Return the SamplingLogDriver instance
-      return SamplingLogDriver(
-        wrappedDriver,
-        samplingRates: samplingRates,
-      );
-    });
-
-    _driverFactory.registerDriver('stack', (config) {
-      final channelsList = (config['channels'] as List).cast<String>();
-      final drivers = channelsList
-          .map((name) => _channels[name])
-          .whereType<LogDriver>()
-          .toList();
-      return StackLogDriver(
-        drivers,
-        ignoreExceptions: config['ignore_exceptions'] ?? false,
-      );
-    });
-  }
-
-  /// Loads and configures drivers from the logger configuration.
-  ///
-  /// Processes the configuration object to set up all defined channels
-  /// that match the current environment.
-  void _loadConfig() {
-    if (_config == null || _config!.channels.isEmpty) {
-      // Add a default console log driver if no channels are configured
-      defaultChannelEnabled ? addChannel('console', ConsoleLogDriver()) : {};
-      return;
-    }
-
-    final stackChannels = _config!.channels.keys.where((channelKey) {
-      return _config!.channels[channelKey]?.driver == 'stack';
-    });
-
-    final otherChannels = _config!.channels.keys.where((channelKey) {
-      return !stackChannels.contains(channelKey);
-    });
-
-    for (final channelKey in otherChannels) {
-      enumerateChannel(channelKey, _config!.channels[channelKey]!);
-    }
-    for (final channelKey in stackChannels) {
-      enumerateChannel(channelKey, _config!.channels[channelKey]!);
-    }
-  }
-
-  void enumerateChannel(String name, ChannelConfig channelConfig) {
-    final mergedConfig = {..._config!.defaults, ...channelConfig.toJson()};
-    final channelInfo = {
-      'name': name,
-      'driver': channelConfig.driver,
-      'config': {...mergedConfig, ...channelConfig.config}
-    };
-    if (channelConfig.env == 'all' || channelConfig.env == _environment) {
-      // Create the driver using the driver factory
-      final driver = _driverFactory.createDriver(channelInfo);
-
-      // Check if a formatter is specified in the config
-      LogMessageFormatter? formatter;
-      if (mergedConfig.containsKey('formatter')) {
-        final formatterName = mergedConfig['formatter'];
-        final formatterBuilder = _formatterFactory[formatterName];
-        if (formatterBuilder != null) {
-          formatter = formatterBuilder();
-        } else {
-          throw ArgumentError('Unsupported formatter: $formatterName');
-        }
-      }
-
-      // Add the driver with the optional formatter
-      addChannel(name, driver, formatter: formatter);
-    }
-  }
 
   /// Logs a message with the specified level and optional context.
   ///
@@ -595,51 +623,99 @@ class Logger extends AbstractLogger {
       stackTrace: StackTrace.current,
     );
 
-    final selectedChannels = _targetChannels ?? _channels.keys.toSet();
-    final uniqueDrivers = <String, LogDriver>{};
+    final selectedChannels = _targetChannels ?? _channels.map((c) => c.name).toSet();
+    final uniqueDrivers = <String, Channel<LogDriver>>{};
 
     for (final channel in selectedChannels) {
-      final driver = _channels[channel];
-      if (driver != null) {
-        uniqueDrivers[channel] = driver;
-      }
+      final channelObj = _channels.firstWhere(
+        (c) => c.name == channel,
+        orElse: () => Channel(name: channel, driver: ConsoleLogDriver()),
+      );
+      uniqueDrivers[channel] = channelObj;
     }
 
-    for (final entry in uniqueDrivers.entries) {
-      final channelName = entry.key;
-      final driver = entry.value;
+    // Create the log entry for stream subscribers
+    final streamEntry = LogEntry(record, _formatRecord(record, 'default'));
 
-      if (driver is StackLogDriver) {
-        driver.setMiddlewares(_driverMiddlewares, _channelMiddlewares);
-      }
-
-      String formattedMessage = _formatRecord(record, channelName);
-
+    // Process stream entry through global middleware
+    if (!_logController.isClosed) {
       processDriverMiddlewares(
-        entry: LogEntry(record, formattedMessage),
-        driverName: channelName,
+        entry: streamEntry,
         globalMiddlewares: _globalMiddlewares,
-        channelMiddlewares: _channelMiddlewares[channelName] ?? [],
-        driverMiddlewares:
-            _driverMiddlewares[driver.runtimeType.toString()] ?? [],
-      ).then((modifiedMessage) async {
-        if (modifiedMessage == null) return; // Log has been filtered out
-
-        final logEntry = LogEntry(record, formattedMessage);
-
-        if (_listener != null) {
-          _listener!(logEntry);
-        } else if (useSink && _logSink != null) {
-          await _logSink!.addLog(logEntry, (entry) async {
-            await driver.log(entry);
-          });
-        } else {
-          await driver.log(logEntry);
+      ).then((processedStreamEntry) {
+        if (processedStreamEntry != null) {
+          if (_logSink != null) {
+            _logSink!.addLog(processedStreamEntry, (logEntry) async {
+              if (!_logController.isClosed) {
+                _logController.add(logEntry);
+              }
+            });
+          } else {
+            if (!_logController.isClosed) {
+              _logController.add(processedStreamEntry);
+            }
+          }
         }
       });
     }
 
+    // Process for each driver
+    for (final entry in uniqueDrivers.entries) {
+      final channelName = entry.key;
+      final driver = entry.value.driver;
+
+      // Middleware maps removed in v2; pipeline centralized in Logger
+
+      String formattedMessage = _formatRecord(record, channelName);
+
+      final typeMws = _driverTypeMiddlewares[driver.runtimeType] ?? const <DriverMiddleware>[];
+      final combinedMws = <DriverMiddleware>[...typeMws];
+
+      processDriverMiddlewares(
+        entry: LogEntry(record, formattedMessage),
+        globalMiddlewares: _globalMiddlewares,
+        channelMiddlewares: _channels.firstWhere((c) => c.name == channelName, orElse: () => Channel(name: channelName, driver: ConsoleLogDriver())).middlewares,
+        driverMiddlewares: combinedMws,
+      ).then((modifiedEntry) async {
+        if (modifiedEntry == null) return; // Log has been filtered out
+
+        if (_logSink != null) {
+          await _logSink!.addLog(modifiedEntry, (entry) async {
+            await driver.log(entry);
+          });
+        } else {
+          await driver.log(modifiedEntry);
+        }
+      });
+    }
     _targetChannels = null;
+  }
+
+  // Type-based selection using registry
+  Logger forDriver<T extends LogDriver>({String? name}) {
+    final map = _typeRegistry[T];
+    if (map == null || map.isEmpty) return this;
+    if (name != null) {
+      final channel = map[name];
+      if (channel != null) {
+        _targetChannels = {channel};
+      }
+      return this;
+    }
+    _targetChannels = map.values.toSet();
+    return this;
+  }
+
+  Logger forDrivers(Iterable<Type> types) {
+    final selected = <String>{};
+    for (final t in types) {
+      final map = _typeRegistry[t];
+      if (map != null) selected.addAll(map.values);
+    }
+    if (selected.isNotEmpty) {
+      _targetChannels = selected;
+    }
+    return this;
   }
 
   /// Formats a message using the appropriate formatter.
@@ -655,7 +731,8 @@ class Logger extends AbstractLogger {
   ///
   /// Returns the formatted message string.
   String _formatRecord(LogRecord record, String channelName) {
-    final formatter = _channelFormatters[channelName] ?? _formatter;
+    final channel = _channels.firstWhere((c) => c.name == channelName, orElse: () => Channel(name: channelName, driver: ConsoleLogDriver()));
+    final formatter = channel.formatter ?? _formatter;
     final typeFormatter = _typeFormatters[record.message.runtimeType];
 
     if (typeFormatter != null) {
@@ -665,28 +742,41 @@ class Logger extends AbstractLogger {
     return formatter.format(record);
   }
 
-  /// Shuts down the logger and flushes any pending logs.
+  /// Shuts down the logger and all its drivers.
   ///
-  /// Ensures all queued logs are written before the application exits.
-  /// If using a sink, waits for all pending logs to be processed.
+  /// This method:
+  /// 1. Notifies all drivers to begin shutdown
+  /// 2. Waits for all drivers to complete their shutdown
+  /// 3. Closes the log controller and sink
   ///
-  /// Returns a Future that completes when shutdown is finished.
-  ///
-  /// Example:
-  /// ```dart
-  /// await logger.info('Shutting down...');
-  /// await logger.shutdown();
-  /// ```
+  /// Returns a Future that completes when all cleanup is done.
   Future<void> shutdown() async {
-    // If a listener is set, there's no need to perform shutdown operations
-    if (_listener != null) {
-      return;
+    // Notify all drivers to begin shutdown
+    final shutdownFutures =
+        _channels.map((channel) => channel.driver.notifyShutdown());
+
+    // Wait for all drivers to complete shutdown
+    await Future.wait(shutdownFutures);
+
+    // Clean up logger resources
+    if (_logSink != null) {
+      final sink = _logSink;
+      _logSink = null;
+      await sink!.close();
     }
 
-    // Only close the sink if it's being used
-    if (useSink && _logSink != null) {
-      await _logSink!.close();
-    }
+    await _logController.close();
+  }
+
+  /// Sets a listener for log entries.
+  ///
+  /// This is the legacy way to listen for log entries. For new code, prefer using
+  /// the [onRecord] stream.
+  ///
+  /// The listener will be called for each log entry that passes the minimum level
+  /// filter.
+  void setListener(LogListener listener) {
+    onRecord.listen(listener);
   }
 }
 

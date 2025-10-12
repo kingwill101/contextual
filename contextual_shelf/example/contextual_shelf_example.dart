@@ -16,7 +16,7 @@ class ApiLogProfile implements LogProfile {
 /// It shows request logging, error handling, and custom log formatting.
 void main() async {
   // Create a logger with multiple channels
-  final logger = Logger()
+  final logger = await Logger.create()
     ..addChannel(
       'console',
       ConsoleLogDriver(),
@@ -93,12 +93,12 @@ Future<shelf.Response> _handleRequest(shelf.Request request) async {
   } catch (e, _) {
     // Errors will be logged by the middleware
     return shelf.Response.internalServerError(
-      body: 'Internal Server Error',
+      body: 'Internal Server Error $getCurrentFileAndLine',
     );
   }
 }
 
-String getCurrentFileAndLine() {
+String get getCurrentFileAndLine {
   // Generate a current stack trace.
   final stackTrace = StackTrace.current.toString();
 

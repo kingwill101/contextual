@@ -1,5 +1,4 @@
 import 'package:contextual/contextual.dart';
-import 'package:contextual/src/middleware_processor.dart';
 
 /// A log driver that combines multiple drivers into a single logging pipeline.
 ///
@@ -33,29 +32,19 @@ class StackLogDriver extends LogDriver {
   /// Whether to continue logging if a driver fails
   final bool ignoreExceptions;
 
-  /// Middleware specific to each driver type
-  Map<String, List<DriverMiddleware>> _driverMiddlewares = {};
-
-  /// Middleware specific to each named channel
-  Map<String, List<DriverMiddleware>> _channelMiddlewares = {};
+  // Middleware maps removed in v2; middleware is centralized in Logger.
 
   /// Creates a stack driver that sends logs to multiple destinations.
   ///
   /// The [_drivers] list specifies the underlying drivers to send logs to.
   /// If [ignoreExceptions] is true, failures in one driver won't prevent
   /// logs from being sent to other drivers.
-  StackLogDriver(this._drivers, {this.ignoreExceptions = false})
-      : super("stack");
+  StackLogDriver(this._drivers, {this.ignoreExceptions = false}) : super("stack");
 
-  /// Configures middleware for the stack driver.
-  ///
-  /// [driverMiddlewares] are applied based on the driver's type.
-  /// [channelMiddlewares] are applied based on the channel name.
-  void setMiddlewares(Map<String, List<DriverMiddleware>> driverMiddlewares,
-      Map<String, List<DriverMiddleware>> channelMiddlewares) {
-    _driverMiddlewares = driverMiddlewares;
-    _channelMiddlewares = channelMiddlewares;
-  }
+  /// Typed helper to construct a StackLogDriver from already resolved drivers.
+  static StackLogDriver fromOptions(List<LogDriver> drivers, {bool ignoreExceptions = false})
+      => StackLogDriver(drivers, ignoreExceptions: ignoreExceptions);
+
 
   @override
   Future<void> log(LogEntry entry) async {
@@ -63,23 +52,9 @@ class StackLogDriver extends LogDriver {
 
     for (var driver in _drivers) {
       try {
-        final driverName = driver.runtimeType.toString();
+        // final driverName = driver.runtimeType.toString();
 
-        // Process the log entry through driver-specific middleware
-        final channelMiddlewares = _channelMiddlewares[driverName] ?? [];
-        final driverMiddlewares = _driverMiddlewares[driverName] ?? [];
-
-        var driverLogEntry = await processDriverMiddlewares(
-          entry: entry,
-          driverName: driverName,
-          globalMiddlewares: [],
-          channelMiddlewares: channelMiddlewares,
-          driverMiddlewares: driverMiddlewares,
-        );
-
-        if (driverLogEntry == null) continue;
-
-        await driver.log(driverLogEntry);
+        await driver.log(entry);
       } catch (e, s) {
         errors[driver.runtimeType.toString()] = {
           'error': e.toString(),

@@ -4,7 +4,7 @@ import 'package:contextual/contextual.dart';
 /// Middleware that adds request tracking information
 class RequestTrackerMiddleware implements DriverMiddleware {
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
+  DriverMiddlewareResult handle(LogEntry entry) {
     final requestId = DateTime.now().millisecondsSinceEpoch.toString();
     final modifiedEntry = entry.copyWith(
       message: '[Request: $requestId] ${entry.message}',
@@ -24,7 +24,7 @@ class SensitiveDataFilterMiddleware implements DriverMiddleware {
   });
 
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
+  DriverMiddlewareResult handle(LogEntry entry) {
     // Get context data
     final contextData = entry.record.context.all();
 
@@ -73,7 +73,7 @@ class PerformanceMiddleware implements DriverMiddleware {
   });
 
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
+  DriverMiddlewareResult handle(LogEntry entry) {
     // Update operation counts
     final operation = entry.record.context.all()['operation'] as String?;
     if (operation != null) {
@@ -127,7 +127,7 @@ class ErrorReportingMiddleware implements DriverMiddleware {
   });
 
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
+  DriverMiddlewareResult handle(LogEntry entry) {
     if (reportLevels.contains(entry.record.level)) {
       // In a real implementation, you would send the error report
       // to your error reporting service
@@ -163,25 +163,21 @@ void main() async {
           'pid': pid,
         })
     // Add driver-specific middleware
-    ..addDriverMiddleware(
-      'console',
+    ..addDriverMiddleware<ConsoleLogDriver>(
       RequestTrackerMiddleware(),
     )
-    ..addDriverMiddleware(
-      'console',
+    ..addDriverMiddleware<ConsoleLogDriver>(
       SensitiveDataFilterMiddleware(
         sensitiveKeys: ['password', 'credit_card', 'api_key'],
         maskValue: '[REDACTED]',
       ),
     )
-    ..addDriverMiddleware(
-      'console',
+    ..addDriverMiddleware<ConsoleLogDriver>(
       PerformanceMiddleware(
         samplingInterval: Duration(seconds: 30),
       ),
     )
-    ..addDriverMiddleware(
-      'console',
+    ..addDriverMiddleware<ConsoleLogDriver>(
       ErrorReportingMiddleware(
         errorReportingEndpoint: Uri.parse('https://errors.example.com/report'),
         reportLevels: {Level.error, Level.critical},

@@ -17,9 +17,24 @@ class HttpLogger {
         var watch = Stopwatch()..start();
 
         Response response;
+
         try {
           response = await innerHandler(request);
           watch.stop();
+
+          final memoryUsage = (ProcessInfo.currentRss / (1024 * 1024))
+              .round(); // Memory usage in MB
+
+          if (logProfile.shouldLogRequest(request)) {
+            logWriter.logRequest(
+              request,
+              response,
+              startTime,
+              watch.elapsed,
+              memory: memoryUsage,
+              pid: pid,
+            );
+          }
         } catch (error, stackTrace) {
           watch.stop();
           final memoryUsage = (ProcessInfo.currentRss / (1024 * 1024))
@@ -36,20 +51,6 @@ class HttpLogger {
             );
           }
           rethrow;
-        }
-
-        final memoryUsage = (ProcessInfo.currentRss / (1024 * 1024))
-            .round(); // Memory usage in MB
-
-        if (logProfile.shouldLogRequest(request)) {
-          logWriter.logRequest(
-            request,
-            response,
-            startTime,
-            watch.elapsed,
-            memory: memoryUsage,
-            pid: pid,
-          );
         }
 
         return response;

@@ -1,0 +1,37 @@
+{
+  "name": "Contextual",
+  "description": "Structured logging for Dart",
+  "root": "docs",
+  "sidebar": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        { "title": "Overview", "href": "/" },
+        { "title": "Getting Started", "href": "/getting-started" },
+        { "title": "Migration to v2", "href": "/migration/v2" }
+      ]
+    },
+    {
+      "group": "API",
+      "pages": [
+        { "title": "Overview", "href": "/api/overview" },
+        { "title": "Driver Configuration", "href": "/api/drivers/configuration" },
+        { "title": "Daily File Driver", "href": "/api/drivers/daily-file" }
+      ]
+    },
+    {
+      "group": "Drivers",
+      "pages": [
+        { "title": "Daily File", "href": "/drivers/daily-file" }
+      ]
+    },
+    {
+      "group": "Advanced",
+      "pages": [
+        { "title": "Middleware", "href": "/advanced/middleware" },
+        { "title": "Batching & Shutdown", "href": "/advanced/batching-and-shutdown" },
+        { "title": "Shelf Integration", "href": "/advanced/shelf-integration" }
+      ]
+    }
+  ]
+}

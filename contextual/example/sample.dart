@@ -3,33 +3,17 @@ import 'package:contextual/contextual.dart';
 
 void main() async {
   // Logger configuration
-  final config = LogConfig.fromJson({
-    'channels': {
-      'stacked': {
-        'driver': 'stack',
-        'config': {
-          'channels': ['sampled_console'],
-        },
-      },
-      'sampled_console': {
-        'driver': 'sampling',
-        'config': {
-          'sample_rates': {
-            'info': 0.5, // 50% of 'info' level logs will be logged
-            'debug': 0.1, // 10% of 'debug' level logs will be logged
-          },
-          'wrapped_driver': {
-            'driver': 'daily',
-          },
-        }
-      },
-    },
-  });
+  final config = TypedLogConfig(
+    channels: const [
+      ConsoleChannel(ConsoleOptions(), name: 'sampled_console'),
+      StackChannel(StackOptions(channels: ['sampled_console']), name: 'stacked'),
+      SamplingChannel(SamplingOptions(rates: {Level.info: 0.5, Level.debug: 0.1}, wrappedChannel: 'stacked'), name: 'sampled'),
+    ],
+  );
 
-  // Initialize the logger with the configuration
-  final logger = Logger(config: config, defaultChannelEnabled: false);
+  final logger = await Logger.create(typedConfig: config);
 
   for (var i = 0; i < 100; i++) {
-    logger.to(['stacked']).info('This is an info message.');
+    logger['sampled'].info('This is an info message.');
   }
 }

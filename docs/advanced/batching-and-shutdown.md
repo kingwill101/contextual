@@ -1,0 +1,43 @@
+# Batching and Shutdown
+
+Contextual provides optional batching to improve throughput for high-volume logging without forcing consumers to call shutdown() in typical applications.
+
+## Defaults
+
+- Batching is opt-in. By default, drivers log synchronously.
+- When batching is enabled, logs are queued to a central LogSink and flushed on a fixed interval and/or batch size.
+- The sink automatically drains on process exit; explicit shutdown() is recommended for CLI/short-lived tasks.
+
+## Enabling batching
+
+```dart
+final logger = await Logger.create();
+await logger.batched(); // enable with defaults
+
+// or customize via LogSinkConfig
+await logger.batched(LogSinkConfig(
+  batchSize: 50,
+  flushInterval: const Duration(milliseconds: 500),
+));
+```
+
+Disable batching:
+
+```dart
+await logger.unbatched();
+```
+
+## Shutdown guidance
+
+- Long-running servers (Shelf, Flutter, etc.): shutdown() is optional; use it when you perform coordinated shutdown for other resources.
+- Short-lived scripts/CLIs: call await logger.shutdown() to ensure buffers are flushed.
+
+```dart
+await logger.info('Finishing up...');
+await logger.shutdown();
+```
+
+## Driver lifecycle
+
+Drivers may allocate resources (e.g. file handles, HTTP clients). Logger.shutdown() notifies drivers to close resources, then waits for completion before closing the sink.
+

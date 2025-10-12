@@ -100,7 +100,7 @@ void main() async {
     );
 
   // Log to production stack
-  multiLogger.to(['production']).info(
+  multiLogger['production'].info(
       'Production system healthy',
       Context({
         'uptime': '5d 12h',
@@ -108,7 +108,7 @@ void main() async {
       }));
 
   // Log to monitoring stack
-  multiLogger.to(['monitoring']).alert(
+  multiLogger['monitoring'].alert(
       'High memory usage detected',
       Context({
         'memory_used': '7.5GB',

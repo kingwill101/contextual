@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:contextual/contextual.dart';
 import 'package:test/test.dart';
 
@@ -11,13 +12,19 @@ void main() {
   group('Logger Level Filtering', () {
     late Logger logger;
     late List<String> loggedMessages;
+    late StreamSubscription<LogEntry> logSubscription;
 
-    setUp(() {
+    setUp(() async {
       loggedMessages = [];
-      logger = Logger(formatter: RawLogFormatter());
-      logger.setListener((entry) {
+      logger = await Logger.create(formatter: RawLogFormatter());
+      logSubscription = logger.onRecord.listen((entry) {
         loggedMessages.add(entry.message);
       });
+    });
+
+    tearDown(() async {
+      await logger.shutdown();
+      await logSubscription.cancel();
     });
 
     test('default level should be debug (allowing all logs)', () {

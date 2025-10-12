@@ -61,68 +61,56 @@ Load configuration from JSON:
 
 
 ```dart
-final config = LogConfig.fromJson({
-  'channels': {
-    'console': {
-      'driver': 'console',
-      'env': 'development',
-      'formatter': 'pretty' // Use the pretty formatter for console channel
-    },
-    'file': {
-      'driver': 'daily',
-      'config': {
-         'path': 'logs/app.log',
-         'days': 7,
-      },
-      'env': 'production',
-      'formatter': 'json' // Use the JSON formatter for file channel
-    },
-    'slack': {
-      'driver': 'webhook',
-     'config': {
-        'url': 'https://hooks.slack.com/...',
-     }
-      'formatter': 'plain' // Use the plain text formatter for Slack channel
-    }
-  },
-  'defaults': {
-    'formatter': 'plain' // Default formatter if none is specified per channel
-  }
-});
+final config = TypedLogConfig(
+  level: 'debug',
+  environment: 'development',
+  channels: const [
+    ConsoleChannel(ConsoleOptions(), name: 'console'),
+    DailyFileChannel(DailyFileOptions(path: 'logs/app', retentionDays: 7), name: 'file'),
+    WebhookChannel(WebhookOptions(url: Uri.parse('https://hooks.slack.com/...')), name: 'slack'),
+  ],
+);
 
-final logger = Logger(config: config);
+final logger = await Logger.create(typedConfig: config);
 
 ```
 
 If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` formatter. To disable the the `default` console logger, at initialization, set the `defaultChannelEnabled` value to `false` in the constructor of your `Logger` instance.
 
 ```dart
-final logger = Logger(
-  defaultChannelEnabled: false,);
+final logger = await Logger.create(typedConfig: const TypedLogConfig(
+  channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+),
+);
 ```
 
 ## Logging Patterns
 Contextual supports two patterns for handling log output:
 
-1. Sink-based Pattern (Default)
-    The default pattern uses channels, drivers, and middleware for flexible output handling.
+1. Direct driver dispatch (Default)
+    Simple and predictable: logs are sent directly to drivers.
 
-    The logger uses a sink to handle asynchronous logging with options for batching and automatic flushing. You can configure the sink using the `LogSinkConfig` class:
+    You can opt into centralized batching for driver dispatch with one line using the provided extension:
 
     ```dart
-    final logger = Logger(
-      sinkConfig: LogSinkConfig(
-        batchSize: 50,  // Number of logs to batch before flushing
-        flushInterval: Duration(seconds: 5),  // Time interval for automatic flushing
-        maxRetries: 3,  // Number of retry attempts for failed log operations
-        autoFlush: true  // Enable or disable automatic flushing
-      )
-    );
+    final logger = Logger()
+      ..addChannel('console', ConsoleLogDriver());
+
+    await logger.batched(LogSinkConfig(
+      batchSize: 50,  // Number of logs to batch before flushing
+      flushInterval: Duration(seconds: 5),  // Time interval for automatic flushing
+    ));
 
     // ... your logging code ...
 
     // Ensure all logs are delivered before shutting down
     await logger.shutdown();
+    ```
+
+    To disable batching again:
+
+    ```dart
+    await logger.unbatched();
     ```
 
 2. Listener Pattern
@@ -150,6 +138,30 @@ Contextual supports two patterns for handling log output:
 Choose the pattern that best fits your needs:
 
 - Use the sink pattern for production systems needing multiple outputs.
+
+### Runtime Channels
+
+A channel is represented by a `Channel<T extends LogDriver>` which bundles the channel name, driver, optional formatter, and optional middlewares.
+
+```dart
+final logger = await Logger.create()
+  ..addChannel('console', ConsoleLogDriver(), formatter: PrettyLogFormatter());
+
+final ch = logger.getChannel('console');
+if (ch != null) {
+  final updated = ch.copyWith(formatter: JsonLogFormatter());
+  logger.addChannel(
+    updated.name,
+    updated.driver,
+    formatter: updated.formatter,
+    middlewares: updated.middlewares,
+  );
+}
+
+// Target drivers by type
+logger.forDriver<ConsoleLogDriver>().info('Only console drivers');
+```
+
 - Use the listener pattern for simple logging.
 
 
@@ -199,6 +211,33 @@ final logger = Logger()
 // Logs sent to 'file' will be in JSON format
 ```
 
+## Output Destinations
+Configure multiple output destinations and target them fluently:
+
+```dart
+final logger = Logger()
+  ..addChannel(
+    'console',
+    ConsoleLogDriver(),
+    formatter: PrettyLogFormatter(),
+  )
+  ..addChannel(
+    'file',
+    DailyFileLogDriver('logs/app.log', retentionDays: 7),
+    formatter: JsonLogFormatter(),
+  );
+
+// Target a single channel (fluent):
+logger['console'].info('Only console');
+
+// Or with a method:
+logger.channel('console').warning('Only console');
+
+// Or multiple channels:
+logger.channels(['console', 'file']).error('Both console and file');
+```
+
+
 If no formatter is specified for a channel, the logger's default formatter is used.
 
 
@@ -216,21 +255,14 @@ logger.formatter(JsonLogFormatter());    // JSON format
 logger.formatter(RawLogFormatter());     // No formatting
 
 // Set formatter per channel in configuration
-final config = LogConfig.fromJson({
-  'channels': {
-    'console': {
-      'driver': 'console',
-      'formatter': 'pretty'
-    },
-    'file': {
-      'driver': 'daily',
-      'config': {
-        'path': 'logs/app.log',
-      },
-      'formatter': 'json'
-    }
-  }
-});
+final config = TypedLogConfig(
+  channels: const [
+    ConsoleChannel(ConsoleOptions(), name: 'console'),
+    DailyFileChannel(DailyFileOptions(path: 'logs/app', retentionDays: 7), name: 'file'),
+  ],
+);
+// Apply custom formatter per channel directly when adding channels programmatically,
+// or use a builder API if you add one later.
 ```
 
 ### Custom Formatters
@@ -313,7 +345,9 @@ logger
   );
 
 // Log to specific destinations
-logger.to(['console', 'file']).info('This goes to console and file');
+logger['console'].info('Console only');
+logger['file'].info('File only');
+logger.forDriver<ConsoleLogDriver>().info('Console by type');
 ```
 
 ## Context
@@ -350,10 +384,8 @@ logger.addMiddleware(() => {
 });
 
 // Channel-specific middleware
-logger.addDriverMiddleware(
-  'slack',
-  ErrorOnlyMiddleware()
-);
+// Driver-type specific middleware (applies to all ConsoleLogDrivers)
+logger.addDriverMiddleware<ConsoleLogDriver>(ErrorOnlyMiddleware());
 ```
 
 ## Advanced Usage
@@ -388,9 +420,9 @@ Channels are named logging destinations that can be configured independently. Ea
 
 ```dart
 // Configure multiple channels with per-channel formatters
-final logger = Logger(
-    config: LogConfig.fromJson({
-      'channels': {
+final logger = await Logger.create(
+  typedConfig: const TypedLogConfig(
+    channels: [
         // Console output for development with pretty formatting
         'console': {
           'driver': 'console',
@@ -420,9 +452,9 @@ final logger = Logger(
     })
 );
 // Log to specific channels
-logger.to
-(['console', 'daily']).info('Regular log message');
-logger.to(['slack']).critical('Critical system failure!');
+logger['console'].info('Regular log message');
+logger['daily'].info('Regular log message');
+logger['slack'].critical('Critical system failure!');
 
 // Default behavior logs to all channels for the current environment
 logger.error('This goes to all active channels'
@@ -488,7 +520,7 @@ Below are the configuration options for each available driver:
 ### Example Configuration
 
 ```dart
-final config = LogConfig.fromJson({
+final config = TypedLogConfig(
    'channels': {
       'console': {
          'driver': 'console',
@@ -534,7 +566,7 @@ Stack channels allow you to create a single channel that forwards logs to multip
 
 ```dart
 
-final config = LogConfig.fromJson({
+final config = TypedLogConfig(
   'channels': {
     // Individual channels with their own formatters
     'file': {
@@ -564,7 +596,7 @@ final config = LogConfig.fromJson({
 });
 
 // Now you can log to both channels with one call
-logger.to(['production']).error('Critical failure');
+logger['production'].error('Critical failure');
 ```
 
 Stack channels are particularly useful for:
@@ -610,7 +642,6 @@ Driver middleware processes log entries before they reach specific drivers. Chan
 class SensitiveDataMiddleware implements DriverMiddleware {
   @override
   FutureOr<DriverMiddlewareResult> handle(
-      String driverName,
       LogEntry entry,
       ) async {
     var message = entry.message;
@@ -623,7 +654,6 @@ class SensitiveDataMiddleware implements DriverMiddleware {
 class ErrorOnlyMiddleware implements DriverMiddleware {
   @override
   FutureOr<DriverMiddlewareResult> handle(
-      String driverName,
       LogEntry entry,
       ) async {
     final errorLevels = ['emergency', 'alert', 'critical', 'error'];
@@ -639,7 +669,7 @@ logger
   // Global middleware applied to all drivers
   .addLogMiddleware(SensitiveDataMiddleware())
   // Channel-specific middleware only applied to the 'slack' channel
-  .addDriverMiddleware('slack', ErrorOnlyMiddleware());
+  .addDriverMiddleware<WebhookLogDriver>(ErrorOnlyMiddleware());
 
 // Middleware execution flow:
 // 1. Context middleware runs first

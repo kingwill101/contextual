@@ -59,12 +59,13 @@ void main() async {
   }).info('Processing checkout');
 
   // Target specific channels
-  logger.to(['console']).debug('Console only - with pretty colors');
-  logger.to(['file']).info('File only - in JSON format');
-  logger.to(['webhook']).warning('Webhook only - plain text');
+  logger['console'].debug('Console only - with pretty colors');
+  logger['file'].info('File only - in JSON format');
+  logger['webhook'].warning('Webhook only - plain text');
 
   // Log an error to console and file, but not webhook
-  logger.to(['console', 'file']).error('System alert - high CPU usage');
+  logger['console'].error('System alert - high CPU usage');
+  logger['file'].error('System alert - high CPU usage');
 
   await logger.shutdown();
 }

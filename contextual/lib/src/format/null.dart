@@ -17,10 +17,10 @@ import 'message_formatter.dart';
 ///   ..addChannel('silent', ConsoleLogDriver(), formatter: NullLogFormatter());
 ///
 /// // This will be logged to console
-/// logger.to(['console']).info('Visible message');
+/// logger['console'].info('Visible message');
 ///
 /// // This will be silently discarded
-/// logger.to(['silent']).info('Invisible message');
+/// logger['silent'].info('Invisible message');
 /// ```
 ///
 /// Note that while messages are discarded, any performance impact from

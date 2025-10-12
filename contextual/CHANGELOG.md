@@ -1,4 +1,28 @@
 ## [1.2.0] - 2025-02-14
+## [2.0.0] - 2025-02-16
+
+### Breaking Changes
+- Removed map-based LogConfig and ChannelConfig in favor of TypedLogConfig and TypedChannel.
+- Removed legacy factories and fromConfig constructors.
+- Removed string-keyed driver registration and loader paths.
+
+### Added
+- Typed configuration via TypedLogConfig with dart_mappable support.
+- TypedChannel definitions: ConsoleChannel, DailyFileChannel, WebhookChannel, StackChannel, SamplingChannel.
+- Driver options classes: ConsoleOptions, DailyFileOptions, WebhookOptions, StackOptions, SamplingOptions.
+- Logger.create(typedConfig: ...) convenience.
+- Type-based selection: logger.forDriver<T>(), plus name-based operator[]
+- Centralized middleware pipeline with defined order: global -> channel -> driver-type.
+- Examples and migration guide updated; docs migrated to docs.page content.
+
+### Changed
+- DailyFileLogDriver.fromOptions replaces fromConfig; isolate-optimized constructor remains opt-in.
+- README and docs updated to typed-first ergonomics and examples.
+
+### Removed
+- All legacy config files and references, including contextual/lib/src/config.dart.
+
+
 
 ### Added
 - Support for custom type formatters

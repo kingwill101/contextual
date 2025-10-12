@@ -1,5 +1,5 @@
-import 'package:contextual/src/types.dart';
-import 'package:contextual/src/util.dart';
+import 'dart:async';
+
 
 import '../log_entry.dart';
 
@@ -11,10 +11,49 @@ import '../log_entry.dart';
 abstract class LogDriver {
   final String name;
 
+  /// Whether the driver has been notified of shutdown
+  bool _isShuttingDown = false;
+
+  /// Whether the driver has completed its shutdown
+  bool _isShutdown = false;
+
+  /// Completer that resolves when shutdown is complete
+  final _shutdownCompleter = Completer<void>();
+
   LogDriver(this.name);
 
   /// Logs the provided [entry] using the driver's implementation
   Future<void> log(LogEntry entry);
+
+  /// Notifies the driver that the logger is shutting down.
+  /// The driver should complete any pending operations and clean up resources.
+  /// Returns a Future that completes when the driver has finished shutting down.
+  Future<void> notifyShutdown() async {
+    if (_isShuttingDown) return _shutdownCompleter.future;
+    _isShuttingDown = true;
+
+    try {
+      await performShutdown();
+      _isShutdown = true;
+      _shutdownCompleter.complete();
+    } catch (e) {
+      _shutdownCompleter.completeError(e);
+      rethrow;
+    }
+  }
+
+  /// Performs the actual shutdown operations.
+  /// Implementations should override this to clean up resources.
+  Future<void> performShutdown() async {}
+
+  /// Returns whether the driver is currently shutting down
+  bool get isShuttingDown => _isShuttingDown;
+
+  /// Returns whether the driver has completed shutdown
+  bool get isShutdown => _isShutdown;
+
+  /// Returns a Future that completes when the driver has finished shutting down
+  Future<void> get onShutdown => _shutdownCompleter.future;
 }
 
 /// Provides a factory for creating instances of [LogDriver] based on configuration.
@@ -23,51 +62,4 @@ abstract class LogDriver {
 /// and creating instances of them based on the provided configuration. This allows
 /// the logging system to be easily extended with new log driver implementations
 /// without modifying the core logging logic.
-class LogDriverFactory {
-  final Map<String, LogDriver Function(Map<String, dynamic>)>
-      _registeredDrivers = {};
-
-  /// Registers a new log driver implementation with the [LogDriverFactory].
-  ///
-  /// The [type] parameter specifies the unique identifier for the log driver
-  /// implementation. The [builder] parameter is a function that takes a
-  /// [Map<String, dynamic>] configuration and returns a new instance of the
-  /// [LogDriver] implementation.
-  ///
-  /// This method allows the logging system to be extended with new log driver
-  /// implementations without modifying the core logging logic.
-  void registerDriver(String type, LogDriverBuilder builder) {
-    _registeredDrivers[type] = builder;
-  }
-
-  /// Creates an instance of [LogDriver] based on the provided configuration.
-  ///
-  /// The [config] parameter is a [Map<String, dynamic>] that contains the
-  /// configuration for the log driver to be created. The configuration should
-  /// include a 'driver' key that specifies the type of log driver to create.
-  ///
-  /// If the specified log driver type is registered with the [LogDriverFactory],
-  /// this method will create an instance of the corresponding log driver
-  /// implementation and return it. If the specified log driver type is not
-  /// registered, this method will throw an [ArgumentError].
-  LogDriver createDriver(Map<String, dynamic> config) {
-    if (config.dot("driver") == null) {
-      throw ArgumentError("driver property is missing");
-    }
-
-    final driverType = config['driver']!;
-    final builder = _registeredDrivers[driverType];
-    if (builder != null) {
-      return builder(config.dot("config", {})!);
-    }
-    throw ArgumentError(
-        'Unsupported driver type: $driverType supported types: ${_registeredDrivers.keys}');
-  }
-
-  /// Returns the map of registered log driver implementations.
-  ///
-  /// This property provides access to the internal map of registered log driver
-  /// implementations, which can be useful for inspecting or modifying the
-  /// available log driver types.
-  List<String> get registeredDrivers => _registeredDrivers.keys.toList();
-}
+// LogDriverFactory was removed in v2. Use typed configuration instead.

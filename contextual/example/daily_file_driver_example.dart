@@ -3,59 +3,71 @@ import 'package:contextual/contextual.dart';
 /// This example demonstrates daily file logging with rotation and retention.
 /// Logs are automatically rotated daily and old logs are cleaned up.
 void main() async {
+  // Create the logger
   final logger = Logger()
     ..addChannel(
       'file',
-      DailyFileLogDriver(
+      DailyFileLogDriver.withIsolateOptimization(
         'logs/app', // Base path for log files
         retentionDays: 30, // Keep logs for 30 days
+        flushInterval: Duration(milliseconds: 1), // Flush logs every second
       ),
       formatter: JsonLogFormatter(
           prettyPrint: true), // Use JSON for structured logging
     );
 
-  // Basic file logging
-  logger.info('Application started');
+  // logger.onRecord.listen((record) {
+  //   print('adfasdfadsfad');
+  // });
 
-  // Log with context data
-  logger.withContext({
-    'server': 'web-01',
-    'environment': 'production',
-    'version': '1.2.3',
-  }).info('Server initialization complete');
+  try {
+    // Basic file logging
+    logger.info('Application started');
 
-  // Simulate multiple days of logging
-  final now = DateTime.now();
+    // Log with context data
+    logger.withContext({
+      'server': 'web-01',
+      'environment': 'production',
+      'version': '1.2.3',
+    }).info('Server initialization complete');
 
-  // Yesterday's logs
-  logger.withContext({
-    'date': now.subtract(Duration(days: 1)).toIso8601String(),
-    'status': 'historical',
-  }).info('This log entry is from yesterday');
+    // Simulate multiple days of logging
+    final now = DateTime.now();
 
-  // Today's logs with various levels
-  logger.debug('Debug message for troubleshooting');
-  logger.warning('System resources running low');
-  logger.error(
-      'Failed to process request',
-      Context({
-        'request_id': '123',
-        'endpoint': '/api/users',
-      }));
+    // Yesterday's logs
+    logger.withContext({
+      'date': now.subtract(Duration(days: 1)).toIso8601String(),
+      'status': 'historical',
+    }).info('This log entry is from yesterday');
 
-  // Log structured data
-  logger.info({
-    'event': 'backup_completed',
-    'duration': 125.45,
-    'files_processed': 1250,
-    'total_size': '2.5GB',
-    'timestamp': DateTime.now().toIso8601String(),
-  });
+    // Today's logs with various levels
+    logger.debug('Debug message for troubleshooting');
+    logger.warning('System resources running low');
+    logger.error(
+        'Failed to process request',
+        Context({
+          'request_id': '123',
+          'endpoint': '/api/users',
+        }));
 
-  // Example of how logs are organized:
-  // logs/app-2024-02-15.log - Today's logs
-  // logs/app-2024-02-14.log - Yesterday's logs
-  // Logs older than retentionDays are automatically deleted
+    // Log structured data
+    logger.info({
+      'event': 'backup_completed',
+      'duration': 125.45,
+      'files_processed': 1250,
+      'total_size': '2.5GB',
+      'timestamp': DateTime.now().toIso8601String(),
+    });
 
-  await logger.shutdown();
+    // Example of how logs are organized:
+    // logs/app-2024-02-15.log - Today's logs
+    // logs/app-2024-02-14.log - Yesterday's logs
+    // Logs older than retentionDays are automatically deleted
+
+    // Simulate some async work
+    await Future.delayed(Duration(seconds: 1));
+  } finally {
+    // Ensure proper cleanup of file handles and resources
+    await logger.shutdown();
+  }
 }

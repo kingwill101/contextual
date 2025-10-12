@@ -5,7 +5,7 @@ import 'package:contextual/contextual.dart';
 /// Middleware that blocks sensitive logs containing passwords
 class BlockSensitiveLogsMiddleware implements DriverMiddleware {
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
+  DriverMiddlewareResult handle(LogEntry entry) {
     if (entry.message.contains('password')) {
       print('[Middleware] Sensitive log detected. Blocking log.');
       return DriverMiddlewareResult.stop();
@@ -21,8 +21,8 @@ class AddTagMiddleware implements DriverMiddleware {
   AddTagMiddleware(this.tag);
 
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
-    final modifiedMessage = '${entry.message} [$tag for $driverName]';
+  DriverMiddlewareResult handle(LogEntry entry) {
+    final modifiedMessage = '${entry.message} [$tag]';
 
     // Create a new LogEntry with the modified message
     final modifiedEntry = entry.copyWith(message: modifiedMessage);
@@ -38,7 +38,7 @@ class AddUserMiddleware implements DriverMiddleware {
   AddUserMiddleware(this.username);
 
   @override
-  DriverMiddlewareResult handle(String driverName, LogEntry entry) {
+  DriverMiddlewareResult handle(LogEntry entry) {
     return DriverMiddlewareResult.modify(
         entry.copyWith(message: '${entry.message} | User: $username'));
   }
@@ -68,45 +68,37 @@ class ExceptionLogFormatter extends LogTypeFormatter<Exception> {
 
 void main() async {
   // Configuration for multiple logging channels
-  final logConfig = LogConfig(
-    defaults: {'env': 'production'},
-    channels: {
-      'console': ChannelConfig(driver: 'console'),
-      'file': ChannelConfig(
-        driver: 'daily',
-        config: {
-          'path': 'logs/app.log',
-          'days': 7,
-        },
-      ),
-      'webhook': ChannelConfig(
-        driver: 'webhook',
-        config: {
-          'webhookUrl':
-              'https://webhook-test.com/b61f3ee766b6354bb67881df60708333',
-          'username': 'LoggerBot',
-          'emoji': ':robot:',
-        },
-      ),
-    },
+  final logConfig = TypedLogConfig(
+    environment: 'production',
+    channels: [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(DailyFileOptions(path: 'logs/app', retentionDays: 7), name: 'file'),
+      WebhookChannel(WebhookOptions(url: Uri.parse('https://webhook-test.com/b61f3ee766b6354bb67881df60708333')),
+          name: 'webhook'),
+    ],
   );
 
-  // Initialize LogManager with fluent configuration
-  final logManager = Logger()
-      .config(logConfig)
-      .environment('production')
-      .formatter(PrettyLogFormatter()) // JSON format for logs
+  // Initialize Logger with fluent configuration
+  final logManager = await Logger.create(typedConfig: logConfig);
+  logManager.environment('production')
+      .formatter(PrettyLogFormatter()) // Human-friendly pretty logs
       .addMiddleware(() =>
           {'app': 'MyApp', 'version': '1.2.0'}) // Global context middleware
       .addLogMiddleware(
           BlockSensitiveLogsMiddleware()) // Global sensitive log blocker
       .addLogMiddleware(AddUserMiddleware('john_doe')) // Enrich logs with user
-      .addDriverMiddleware('console',
+      .addDriverMiddleware<ConsoleLogDriver>(
           AddTagMiddleware('DEBUG-CONSOLE')) // Add console-specific tags
       .addTypeFormatter<Map<String, dynamic>>(
           StructuredMapFormatter()) // JSON structure formatter
       .addTypeFormatter<Exception>(
           ExceptionLogFormatter()); // Exception formatter
+
+  // Enable centralized batching for driver dispatch (optional)
+  await logManager.batched(LogSinkConfig(
+    batchSize: 50,
+    flushInterval: Duration(milliseconds: 500),
+  ));
 
   // Example 1: Logging simple messages
   logManager.info('Application started successfully.');
@@ -127,8 +119,7 @@ void main() async {
   }
 
   // Example 4: Logging to specific channels (console and file)
-  logManager
-      .to(['console', 'file']).critical('Critical system failure detected!');
+  logManager.channels(['console', 'file']).critical('Critical system failure detected!');
 
   // Example 5: Dynamic on-demand channel configuration
   final customChannel = logManager.buildChannel({
@@ -138,7 +129,7 @@ void main() async {
   });
 
   logManager.addChannel('custom', customChannel);
-  logManager.to(['custom']).warning('Custom log channel warning.');
+  logManager['custom'].warning('Custom log channel warning.');
 
   // Example 6: Adding shared context and logging
   logManager
@@ -146,7 +137,7 @@ void main() async {
           'User details updated successfully.');
 
   // Example 7: Logging stack configuration (console + webhook)
-  logManager.to(['console', 'webhook']).alert('System is under heavy load.');
+  logManager.channels(['console', 'webhook']).alert('System is under heavy load.');
 
   // Shutdown to flush logs
   await logManager.shutdown();

@@ -50,62 +50,31 @@ void main() {
     });
   });
 
-  group('LogDriverFactory', () {
-    late LogDriverFactory loggerFactory;
+  group('Typed driver selection and construction', () {
+    test('Logger.forDriverType selects by type', () async {
+      final logger = await Logger.create(typedConfig: const TypedLogConfig(
+        channels: [
+          ConsoleChannel(ConsoleOptions(), name: 'consoleA'),
+          ConsoleChannel(ConsoleOptions(), name: 'consoleB'),
+        ],
+      ));
 
-    setUp(() {
-      loggerFactory = LogDriverFactory();
+      // Should select both console channels
+      logger.forDriver<ConsoleLogDriver>().info('hello');
     });
 
-    test('registerDriver adds driver builder to registry', () {
-      loggerFactory.registerDriver('test', (config) => TestDriver());
-      expect(loggerFactory.registeredDrivers, contains('test'));
-    });
-
-    test('createDriver throws ArgumentError for unregistered driver type', () {
-      expect(
-        () => loggerFactory.createDriver({'driver': 'unknown'}),
-        throwsA(isA<ArgumentError>()),
+    test('DailyFileLogDriver.fromOptions constructs correctly', () async {
+      final driver = DailyFileLogDriver.fromOptions(
+        const DailyFileOptions(path: 'logs/app', retentionDays: 1),
       );
+      expect(driver, isA<DailyFileLogDriver>());
     });
 
-    test('createDriver passes configuration to builder', () {
-      var configPassed = <String, dynamic>{};
-      loggerFactory.registerDriver('test', (config) {
-        configPassed = config;
-        return TestDriver();
-      });
-
-      final testConfig = {
-        'driver': 'test',
-        'config': {
-          'key': 'value',
-        }
-      };
-      loggerFactory.createDriver(testConfig);
-      expect(configPassed, equals(testConfig.dot("config")));
-    });
-
-    test('multiple drivers can be registered and created', () {
-      loggerFactory.registerDriver('driver1', (config) => TestDriver());
-      loggerFactory.registerDriver('driver2', (config) => TestDriver());
-
-      expect(loggerFactory.registeredDrivers, contains('driver1'));
-      expect(loggerFactory.registeredDrivers, contains('driver2'));
-    });
-
-    test('error message includes available driver types', () {
-      loggerFactory.registerDriver('test1', (config) => TestDriver());
-      loggerFactory.registerDriver('test2', (config) => TestDriver());
-
-      try {
-        loggerFactory.createDriver({'driver': 'unknown'});
-        fail('Expected ArgumentError');
-      } catch (e) {
-        expect(e, isA<ArgumentError>());
-        expect(e.toString(), contains('test1'));
-        expect(e.toString(), contains('test2'));
-      }
+    test('WebhookLogDriver.fromOptions constructs correctly', () async {
+      final driver = WebhookLogDriver.fromOptions(
+        WebhookOptions(url: Uri.parse('https://example.com/hook')),
+      );
+      expect(driver, isA<WebhookLogDriver>());
     });
   });
 }

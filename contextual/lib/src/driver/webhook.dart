@@ -4,6 +4,7 @@ import 'package:contextual/src/log_entry.dart';
 import 'package:universal_io/io.dart';
 
 import 'driver.dart';
+import '../typed/webhook_options.dart';
 
 /// A log driver that sends log messages to a webhook endpoint.
 ///
@@ -22,12 +23,20 @@ import 'driver.dart';
 /// ```
 class WebhookLogDriver extends LogDriver {
   final Uri endpoint;
+  Map<String, String>? headers;
+  final HttpClient client = HttpClient();
 
   /// Creates a new webhook log driver that sends logs to [endpoint].
   ///
   /// The [endpoint] must be a valid HTTP or HTTPS URL that accepts POST requests
   /// with JSON payloads.
-  WebhookLogDriver(this.endpoint) : super("webhook");
+  
+  /// Typed options constructor for v2
+  factory WebhookLogDriver.fromOptions(WebhookOptions options) {
+    return WebhookLogDriver(options.url, headers: options.headers ?? const {});
+  }
+
+  WebhookLogDriver(this.endpoint, {this.headers = const {}}) : super("webhook");
 
   @override
   Future<void> log(LogEntry entry) async {
@@ -36,11 +45,15 @@ class WebhookLogDriver extends LogDriver {
       'entry': formattedMessage,
     });
 
-    final client = HttpClient();
-
+    print('[WebhookLogDriver] Sending log: $formattedMessage');
     try {
       final request = await client.postUrl(endpoint);
       request.headers.contentType = ContentType.json;
+      if (headers != null) {
+        headers!.forEach((key, value) {
+          request.headers.add(key, value);
+        });
+      }
       request.write(body);
       final response = await request.close();
       await response.drain();

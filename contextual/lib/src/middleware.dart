@@ -6,15 +6,11 @@ import 'package:contextual/src/log_entry.dart';
 abstract class DriverMiddleware {
   /// Handles a log entry and returns a result indicating how to proceed.
   ///
-  /// - [driverName]: The name of the driver handling the log entry.
   /// - [entry]: The [LogEntry] to process.
   ///
   /// Returns a [DriverMiddlewareResult] indicating whether to proceed,
   /// stop processing, or modify the log entry.
-  FutureOr<DriverMiddlewareResult> handle(
-    String driverName,
-    LogEntry entry,
-  );
+  FutureOr<DriverMiddlewareResult> handle(LogEntry entry);
 }
 
 /// Represents the possible actions that a [DriverMiddleware] can take when handling a log entry.

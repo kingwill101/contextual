@@ -7,6 +7,41 @@ import 'log_entry.dart';
 
 typedef LogCallback = Future<void> Function(LogEntry entry);
 
+/// A callback type for processing a batch of log entries.
+/// This function must be a top-level or static function so that it can be sent to an isolate.
+
+typedef LogBatchProcessor = Future<void> Function(List<LogEntry> batch);
+
+/// Abstract base class for log sinks.
+///
+/// This defines the common interface that all log sinks must implement.
+/// It provides the basic functionality for batching and processing log entries.
+abstract class Sink {
+  /// The maximum number of logs to accumulate before triggering a flush.
+  int get batchSize;
+
+  /// The interval between automatic flush operations.
+  Duration get autoFlushInterval;
+
+  /// The duration to wait after the last log before auto-closing the sink.
+  Duration get autoCloseAfter;
+
+  /// Adds a new log operation to the sink.
+  ///
+  /// The [entry] parameter specifies the log entry, and [logCallback] is the
+  /// actual logging operation to perform.
+  ///
+  /// Emergency and critical logs are flushed immediately. Other logs are
+  /// batched until either the [batchSize] is reached or the [autoFlushInterval]
+  /// triggers a flush.
+  Future<void> addLog(LogEntry entry, LogCallback logCallback);
+
+  /// Closes the sink and releases any resources.
+  ///
+  /// This should be called when the sink is no longer needed to ensure proper cleanup.
+  Future<void> close();
+}
+
 /// A class that represents the configuration for a [LogSink].
 ///
 /// This configuration controls how logs are batched, flushed, and retried.
@@ -48,6 +83,10 @@ class LogSinkConfig {
   /// Whether to automatically flush logs periodically based on [flushInterval].
   final bool autoFlush;
 
+  /// The duration to wait after the last log before auto-closing the sink.
+  /// This helps avoid requiring an explicit shutdown call.
+  final Duration autoCloseAfter;
+
   /// Creates a new [LogSinkConfig] instance with the specified parameters.
   ///
   /// Parameters:
@@ -55,11 +94,13 @@ class LogSinkConfig {
   /// - [flushInterval]: Time between automatic flushes (default: 1 second)
   /// - [maxRetries]: Number of retry attempts for failed operations (default: 3)
   /// - [autoFlush]: Enable/disable automatic flushing (default: true)
+  /// - [autoCloseAfter]: Inactivity window before auto-close (default: 5 seconds)
   const LogSinkConfig({
     this.batchSize = 10,
     this.flushInterval = const Duration(seconds: 1),
     this.maxRetries = 3,
     this.autoFlush = true,
+    this.autoCloseAfter = const Duration(seconds: 5),
   });
 }
 
@@ -87,14 +128,17 @@ class LogSinkConfig {
 /// // Close the sink when done
 /// await sink.close();
 ///
-class LogSink {
+class LogSink implements Sink {
   /// The maximum number of logs to accumulate before triggering a flush.
+  @override
   final int batchSize;
 
   /// The interval between automatic flush operations.
+  @override
   final Duration autoFlushInterval;
 
   /// The duration to wait after the last log before auto-closing the sink.
+  @override
   final Duration autoCloseAfter;
 
   /// Internal flag to prevent concurrent flush operations.
@@ -112,14 +156,12 @@ class LogSink {
   /// Creates a new [LogSink] instance with the specified parameters.
   ///
   /// Parameters:
-  /// - [batchSize]: Maximum number of logs before forcing a flush (default: 10)
-  /// - [autoFlushInterval]: Time between automatic flushes (default: 500ms)
-  /// - [autoCloseAfter]: Time to wait before auto-closing (default: 100ms)
+  /// - [config]: Optional configuration for the sink behavior
   LogSink({
-    this.batchSize = 10,
-    this.autoFlushInterval = const Duration(milliseconds: 500),
-    this.autoCloseAfter = const Duration(milliseconds: 100),
-  });
+    LogSinkConfig? config,
+  })  : batchSize = config?.batchSize ?? 10,
+        autoFlushInterval = config?.flushInterval ?? const Duration(seconds: 1),
+        autoCloseAfter = config?.autoCloseAfter ?? const Duration(seconds: 5);
 
   /// Adds a new log operation to the sink.
   ///
@@ -129,6 +171,7 @@ class LogSink {
   /// Emergency and critical logs are flushed immediately. Other logs are
   /// batched until either the [batchSize] is reached or the [autoFlushInterval]
   /// triggers a flush.
+  @override
   Future<void> addLog(LogEntry entry, LogCallback logCallback) async {
     if (_flushTimer == null) {
       _startFlushTimer();
@@ -148,51 +191,40 @@ class LogSink {
   /// Starts the automatic flush timer.
   void _startFlushTimer() {
     _flushTimer?.cancel();
-    _flushTimer = Timer.periodic(autoFlushInterval, (_) async {
-      if (!_isFlushing && _logBuffer.isNotEmpty) {
-        await _flushPendingLogs();
-      }
-    });
+    _flushTimer = Timer.periodic(autoFlushInterval, (_) => _flushPendingLogs());
   }
 
-  /// Flushes all pending logs in the buffer.
-  ///
-  /// This method ensures that all buffered logs are processed and prevents
-  /// concurrent flush operations.
+  /// Flushes any pending log operations.
   Future<void> _flushPendingLogs() async {
     if (_isFlushing || _logBuffer.isEmpty) return;
 
     _isFlushing = true;
-
     try {
       while (_logBuffer.isNotEmpty) {
-        final logEntry = _logBuffer.removeLast();
-        await logEntry.value(logEntry.key);
+        final entry = _logBuffer.removeLast();
+        await entry.value(entry.key);
       }
-    } catch (e) {
-      print('[LogSink Error] Error during flush: $e');
     } finally {
       _isFlushing = false;
     }
   }
 
   /// Resets the auto-close timer.
-  ///
-  /// This method is called after each log operation to prevent premature closing
-  /// of the sink while it's still in use.
   void _resetAutoCloseTimer() {
     _autoCloseTimer?.cancel();
-    _autoCloseTimer = Timer(autoCloseAfter, close);
+    _autoCloseTimer = Timer(autoCloseAfter, () => close());
   }
 
-  /// Closes the sink and releases all resources.
+  /// Closes the sink and releases any resources.
   ///
-  /// This method:
-  /// - Cancels all active timers
-  /// - Flushes any remaining logs
-  /// - Should be called when the sink is no longer needed
+  /// This will:
+  /// 1. Cancel any pending timers
+  /// 2. Flush any remaining logs
+  /// 3. Clean up resources
+  @override
   Future<void> close() async {
     _flushTimer?.cancel();
+    _flushTimer = null;
     _autoCloseTimer?.cancel();
     await _flushPendingLogs(); // Flush pending logs before closing
   }

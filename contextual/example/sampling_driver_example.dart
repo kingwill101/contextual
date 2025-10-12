@@ -90,7 +90,7 @@ void main() async {
 
   // Log high-volume metrics - most will be sampled out
   for (var i = 0; i < 1000; i++) {
-    multiLogger.to(['metrics']).debug(
+    multiLogger['metrics'].debug(
         'Metric update',
         Context({
           'metric': 'cpu_usage',
@@ -100,7 +100,7 @@ void main() async {
   }
 
   // Critical alerts - all will be logged
-  multiLogger.to(['alerts']).critical(
+  multiLogger['alerts'].critical(
       'System overload',
       Context({
         'component': 'database',

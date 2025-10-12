@@ -45,8 +45,11 @@ class SamplingLogDriver extends LogDriver {
   /// * 0.0 means never log messages at this level
   /// * 1.0 means always log messages at this level
   /// * 0.5 means log approximately half of the messages at this level
-  SamplingLogDriver(this.wrappedDriver, {required this.samplingRates})
-      : super("sampling");
+  SamplingLogDriver(this.wrappedDriver, {required this.samplingRates}) : super("sampling");
+  
+  /// Construct from typed options and a resolved wrapped driver.
+  static SamplingLogDriver fromOptions(LogDriver wrapped, Map<Level,double> rates) =>
+      SamplingLogDriver(wrapped, samplingRates: rates);
 
   @override
 

@@ -13,8 +13,7 @@ class ModifyMiddleware extends DriverMiddleware {
   ModifyMiddleware(this.appendText);
 
   @override
-  FutureOr<DriverMiddlewareResult> handle(
-      String driverName, LogEntry entry) async {
+  FutureOr<DriverMiddlewareResult> handle(LogEntry entry) async {
     final modifiedMessage = '${entry.message}$appendText';
 
     // Create a new LogEntry with the modified message
@@ -30,8 +29,7 @@ class StopMiddleware extends DriverMiddleware {
   StopMiddleware(this.keyword);
 
   @override
-  FutureOr<DriverMiddlewareResult> handle(
-      String driverName, LogEntry entry) async {
+  FutureOr<DriverMiddlewareResult> handle(LogEntry entry) async {
     if (entry.message.contains(keyword)) {
       return DriverMiddlewareResult.stop();
     }
@@ -46,8 +44,7 @@ class AsyncModifyMiddleware extends DriverMiddleware {
   AsyncModifyMiddleware(this.appendText);
 
   @override
-  FutureOr<DriverMiddlewareResult> handle(
-      String driverName, LogEntry entry) async {
+  FutureOr<DriverMiddlewareResult> handle(LogEntry entry) async {
     await Future.delayed(Duration(milliseconds: 50)); // Simulate async delay
     return DriverMiddlewareResult.modify(
         entry.copyWith(message: '${entry.message}$appendText'));
@@ -81,7 +78,6 @@ void main() {
 
       final result = await processDriverMiddlewares(
         entry: entry,
-        driverName: 'testDriver',
         globalMiddlewares: globalMiddleware,
         channelMiddlewares: channelMiddleware,
         driverMiddlewares: driverMiddleware,
@@ -109,7 +105,6 @@ void main() {
 
       final result = await processDriverMiddlewares(
         entry: entry,
-        driverName: 'testDriver',
         globalMiddlewares: stopMiddleware,
       );
 
@@ -133,7 +128,6 @@ void main() {
 
       final result = await processDriverMiddlewares(
         entry: entry,
-        driverName: 'testDriver',
         globalMiddlewares: middlewares,
       );
 
@@ -158,7 +152,6 @@ void main() {
 
       final result = await processDriverMiddlewares(
         entry: entry,
-        driverName: 'testDriver',
         globalMiddlewares: middlewares,
       );
 
@@ -191,7 +184,6 @@ void main() {
 
       final result = await processDriverMiddlewares(
         entry: entry,
-        driverName: 'testDriver',
         globalMiddlewares: globalMiddleware,
         channelMiddlewares: channelMiddleware,
         driverMiddlewares: driverMiddleware,
@@ -217,7 +209,6 @@ void main() {
 
       final result = await processDriverMiddlewares(
         entry: entry,
-        driverName: 'testDriver',
         globalMiddlewares: asyncMiddleware,
       );
 

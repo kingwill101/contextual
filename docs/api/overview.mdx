@@ -1,0 +1,240 @@
+# API Overview
+
+Contextual's API is designed to be intuitive and flexible, providing a rich set of features for logging in Dart applications.
+
+## Core Components
+
+### Logger
+
+The main class for logging operations. It manages log channels, formatting, and message processing.
+
+```dart
+final logger = await Logger.create(
+  environment: 'production',
+  formatter: JsonLogFormatter(),
+);
+```
+
+Key methods:
+- `log(Level level, dynamic message, [Context? context])`: Core logging method
+- `addChannel(String name, LogDriver driver)`: Add output channel
+- `addMiddleware(ContextMiddleware middleware)`: Add context middleware
+- `withContext(Map<String, dynamic> context)`: Add shared context
+- `setLevel(Level level)`: Set minimum log level
+
+
+#### Runtime Channels
+
+Each channel is represented at runtime by a `Channel<T extends LogDriver>` object that bundles:
+- the channel `name`
+- the `driver` instance
+- an optional `formatter`
+- optional `middlewares` (applied after global middleware)
+
+```dart
+// Add a channel and then adjust it with copyWith
+logger.addChannel('console', ConsoleLogDriver(), formatter: PrettyLogFormatter());
+
+final ch = logger.getChannel('console');
+if (ch != null) {
+  // Example showing how a Channel can be adjusted; normally you'd just re-add
+  final updated = ch.copyWith(formatter: JsonLogFormatter());
+  // Re-register the updated channel
+  logger.addChannel(updated.name, updated.driver, formatter: updated.formatter, middlewares: updated.middlewares);
+}
+```
+
+You can also target drivers by type:
+
+```dart
+logger.forDriver<ConsoleLogDriver>().info('Only console drivers');
+```
+
+### LogDriver
+
+Abstract base class for implementing log drivers. Built-in drivers include:
+
+- `ConsoleLogDriver`: Terminal output with color support
+- `DailyFileLogDriver`: Daily rotating file logs
+- `WebhookLogDriver`: HTTP webhook integration
+- `StackLogDriver`: Combines multiple drivers
+- `SamplingLogDriver`: Probabilistic logging
+
+Example custom driver:
+```dart
+class CustomLogDriver extends LogDriver {
+  CustomLogDriver() : super('custom');
+
+  @override
+  Future<void> log(LogEntry entry) async {
+    // Custom log handling
+  }
+}
+```
+
+### Context
+
+Container for structured log data:
+
+```dart
+final context = Context({
+  'user_id': 'user123',
+  'request_id': 'req456',
+  'metadata': {
+    'version': '1.0.0',
+    'environment': 'production'
+  }
+});
+```
+
+### LogEntry
+
+Represents a single log message with metadata:
+
+```dart
+class LogEntry {
+  final LogRecord record;
+  final String formattedMessage;
+  
+  // Contains:
+  // - Level
+  // - Message
+  // - Context
+  // - Timestamp
+  // - Stack trace
+}
+```
+
+### Formatters
+
+Format log entries into strings:
+
+- `PlainTextLogFormatter`: Simple text output
+- `JsonLogFormatter`: JSON-formatted logs
+- `PrettyLogFormatter`: Colored, human-readable output
+- `RawLogFormatter`: Unformatted message only
+- `NullLogFormatter`: No formatting
+
+Custom formatter example:
+```dart
+class CustomFormatter extends LogMessageFormatter {
+  @override
+  String format(LogRecord record) {
+    return '[${record.level}] ${record.message}';
+  }
+}
+```
+
+## Advanced Features
+
+### Log Queue
+
+Batches log messages for efficient processing:
+
+```dart
+final queue = LogQueue(
+  config: LogQueueConfig(
+    flushInterval: Duration(milliseconds: 500),
+  ),
+  processor: (entries) async {
+    // Process batch of entries
+  },
+);
+```
+
+### Middleware
+
+Transform or enrich log entries:
+
+```dart
+logger.addMiddleware(() => {
+  'timestamp': DateTime.now().toIso8601String(),
+  'process_id': Platform.pid,
+});
+
+logger.addLogMiddleware(SensitiveDataFilter());
+```
+
+### Type Formatters
+
+Custom formatting for specific types:
+
+```dart
+logger.addTypeFormatter<Error>(ErrorLogFormatter());
+```
+
+## Configuration
+
+### TypedLogConfig
+
+Configure channels through code or configuration:
+
+```dart
+final config = TypedLogConfig(
+  environment: 'production',
+  channels: const [
+    DailyFileChannel(
+      DailyFileOptions(path: 'logs/app', retentionDays: 30),
+      name: 'file',
+    ),
+    WebhookChannel(
+      WebhookOptions(url: Uri.parse('https://logs.example.com/ingest')),
+      name: 'webhook',
+    ),
+  ],
+);
+```
+
+### LogSinkConfig
+
+Configure log batching and processing:
+
+```dart
+final sinkConfig = LogSinkConfig(
+  batchSize: 50,
+  flushInterval: Duration(seconds: 1),
+  maxRetries: 3,
+  autoFlush: true,
+);
+```
+
+## Best Practices
+
+1. **Use Structured Logging**
+   ```dart
+   logger.info('User logged in', Context({
+     'user_id': userId,
+     'ip_address': ipAddress,
+     'login_method': 'oauth'
+   }));
+   ```
+
+2. **Set Appropriate Log Levels**
+   ```dart
+   logger.setLevel(Level.warning); // Only log warning and above in production
+   ```
+
+3. **Use Channel-Specific Formatters**
+   ```dart
+   logger.addChannel('file', fileDriver, formatter: JsonLogFormatter());
+   logger.addChannel('console', consoleDriver, formatter: PrettyLogFormatter());
+   ```
+
+4. **Clean Up Resources**
+   ```dart
+   await logger.shutdown(); // Before application exit
+   ```
+
+## Next Steps
+
+- [Daily File Driver](drivers/daily-file)
+- [Driver Configuration](drivers/configuration)
+- [Middleware Guide](../advanced/middleware) 
+
+
+
+
+
+
+
+- [Migration to v2](../migration/v2)

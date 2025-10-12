@@ -1,9 +1,13 @@
 import 'package:contextual/contextual.dart';
 
-void main() async {
+Future<void> main() async {
   final logger = Logger();
   logger.withContext({'app': 'MyApp', 'version': '1.0.0'});
-  await logger.setListener(
-      (LogEntry entry) => print('[${entry.record.level}] ${entry.message}'));
-  logger.to(['console']).info('Application started.');
+
+  logger['console'].info('Application started.');
+
+  for (var i = 0; i < 100; i++) {
+    logger['console'].info('Processing item $i');
+    await Future.delayed(Duration(milliseconds: 100));
+  }
 }

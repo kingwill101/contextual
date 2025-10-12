@@ -7,7 +7,6 @@ import 'log_entry.dart';
 /// Returns `null` if processing should stop; otherwise, returns the potentially modified [LogEntry].
 Future<LogEntry?> processDriverMiddlewares({
   required LogEntry entry,
-  required String driverName,
   List<DriverMiddleware> globalMiddlewares = const [],
   List<DriverMiddleware> channelMiddlewares = const [],
   List<DriverMiddleware> driverMiddlewares = const [],
@@ -16,7 +15,7 @@ Future<LogEntry?> processDriverMiddlewares({
 
   // Apply global middlewares first.
   for (var middleware in globalMiddlewares) {
-    final result = await middleware.handle(driverName, currentEntry);
+    final result = await middleware.handle(currentEntry);
     if (result.action == DriverMiddlewareAction.stop) {
       return null; // Stop processing.
     } else if (result.action == DriverMiddlewareAction.modify) {
@@ -27,7 +26,7 @@ Future<LogEntry?> processDriverMiddlewares({
 
   // Apply channel-specific middlewares next.
   for (var middleware in channelMiddlewares) {
-    final result = await middleware.handle(driverName, currentEntry);
+    final result = await middleware.handle(currentEntry);
     if (result.action == DriverMiddlewareAction.stop) {
       return null;
     } else if (result.action == DriverMiddlewareAction.modify) {
@@ -37,7 +36,7 @@ Future<LogEntry?> processDriverMiddlewares({
 
   // Apply driver-specific middlewares last.
   for (var middleware in driverMiddlewares) {
-    final result = await middleware.handle(driverName, currentEntry);
+    final result = await middleware.handle(currentEntry);
     if (result.action == DriverMiddlewareAction.stop) {
       return null;
     } else if (result.action == DriverMiddlewareAction.modify) {

@@ -119,6 +119,22 @@ Configure different formatters for different outputs:
 ```dart
 final logger = Logger()
   ..addChannel(
+
+### Selecting Channels and Middlewares
+
+Contextual v2 favors type-based and name-based selection without arrays:
+
+```dart
+// Name-based
+logger['console'].info('Console');
+
+// Type-based
+logger.forDriver<ConsoleLogDriver>().info('Console by type');
+
+// Typed driver middleware registration
+logger.addDriverMiddleware<ConsoleLogDriver>(MyMiddleware());
+```
+
     'console',
     ConsoleLogDriver(),
     formatter: PrettyLogFormatter(),

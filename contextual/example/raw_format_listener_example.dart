@@ -5,11 +5,9 @@ void main() {
   final logger = Logger(formatter: RawLogFormatter());
 
   // Set up a listener to handle log messages
-  logger.setListener((r) {
-    print(
-        '${r.message} ${r.record.level} ${r.record.message} ${r.record.time}');
+  logger.onRecord.listen((record) {
+    print('${record.record.level}: ${record.message}');
   });
-
   // Log messages using the listener
   logger.info('This is an informational message in raw text format.');
   logger.error('This is an error message in raw text format.');
