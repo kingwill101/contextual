@@ -1,7 +1,7 @@
 import 'package:dart_mappable/dart_mappable.dart';
 import 'batching_config.dart';
 import 'formatter_settings_typed.dart';
-import 'typed_channel.dart';
+import 'channel_config.dart';
 
 part 'log_config.mapper.dart';
 
@@ -13,7 +13,7 @@ class TypedLogConfig with TypedLogConfigMappable {
   final String environment;
   final BatchingConfig? batching;
   final Map<String, dynamic>? context;
-  final List<TypedChannel> channels;
+  final List<ChannelConfig> channels;
 
   const TypedLogConfig({
     this.level,

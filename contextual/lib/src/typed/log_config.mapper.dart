@@ -16,7 +16,7 @@ class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
       MapperContainer.globals.use(_instance = TypedLogConfigMapper._());
       FormatterSettingsTypedMapper.ensureInitialized();
       BatchingConfigMapper.ensureInitialized();
-      TypedChannelMapper.ensureInitialized();
+      ChannelConfigMapper.ensureInitialized();
     }
     return _instance!;
   }
@@ -63,8 +63,8 @@ class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
     _$context,
     opt: true,
   );
-  static List<TypedChannel> _$channels(TypedLogConfig v) => v.channels;
-  static const Field<TypedLogConfig, List<TypedChannel>> _f$channels = Field(
+  static List<ChannelConfig> _$channels(TypedLogConfig v) => v.channels;
+  static const Field<TypedLogConfig, List<ChannelConfig>> _f$channels = Field(
     'channels',
     _$channels,
     opt: true,
@@ -165,7 +165,11 @@ abstract class TypedLogConfigCopyWith<$R, $In extends TypedLogConfig, $Out>
   BatchingConfigCopyWith<$R, BatchingConfig, BatchingConfig>? get batching;
   MapCopyWith<$R, String, dynamic, ObjectCopyWith<$R, dynamic, dynamic>>?
   get context;
-  ListCopyWith<$R, TypedChannel, ObjectCopyWith<$R, TypedChannel, TypedChannel>>
+  ListCopyWith<
+    $R,
+    ChannelConfig,
+    ObjectCopyWith<$R, ChannelConfig, ChannelConfig>
+  >
   get channels;
   $R call({
     String? level,
@@ -174,7 +178,7 @@ abstract class TypedLogConfigCopyWith<$R, $In extends TypedLogConfig, $Out>
     String? environment,
     BatchingConfig? batching,
     Map<String, dynamic>? context,
-    List<TypedChannel>? channels,
+    List<ChannelConfig>? channels,
   });
   TypedLogConfigCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
@@ -211,7 +215,11 @@ class _TypedLogConfigCopyWithImpl<$R, $Out>
         )
       : null;
   @override
-  ListCopyWith<$R, TypedChannel, ObjectCopyWith<$R, TypedChannel, TypedChannel>>
+  ListCopyWith<
+    $R,
+    ChannelConfig,
+    ObjectCopyWith<$R, ChannelConfig, ChannelConfig>
+  >
   get channels => ListCopyWith(
     $value.channels,
     (v, t) => ObjectCopyWith(v, $identity, t),
@@ -225,7 +233,7 @@ class _TypedLogConfigCopyWithImpl<$R, $Out>
     String? environment,
     Object? batching = $none,
     Object? context = $none,
-    List<TypedChannel>? channels,
+    List<ChannelConfig>? channels,
   }) => $apply(
     FieldCopyWithData({
       if (level != $none) #level: level,

@@ -91,7 +91,7 @@ export 'src/log_level.dart';
 export 'src/logger.dart';
 export 'src/logger_extensions.dart';
 export 'src/typed/log_config.dart' show TypedLogConfig;
-export 'src/typed/typed_channel.dart' show TypedChannel, ConsoleChannel, DailyFileChannel, WebhookChannel, StackChannel, SamplingChannel;
+export 'src/typed/channel_config.dart' show ConsoleChannel, DailyFileChannel, WebhookChannel, StackChannel, SamplingChannel;
 export 'src/typed/daily_file_options.dart' show DailyFileOptions;
 export 'src/typed/console_options.dart' show ConsoleOptions;
 export 'src/typed/webhook_options.dart' show WebhookOptions;

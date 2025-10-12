@@ -5,71 +5,73 @@
 // ignore_for_file: unused_element, unnecessary_cast, override_on_non_overriding_member
 // ignore_for_file: strict_raw_type, inference_failure_on_untyped_parameter
 
-part of 'typed_channel.dart';
+part of 'channel_config.dart';
 
-class TypedChannelMapper extends ClassMapperBase<TypedChannel> {
-  TypedChannelMapper._();
+class ChannelConfigMapper extends ClassMapperBase<ChannelConfig> {
+  ChannelConfigMapper._();
 
-  static TypedChannelMapper? _instance;
-  static TypedChannelMapper ensureInitialized() {
+  static ChannelConfigMapper? _instance;
+  static ChannelConfigMapper ensureInitialized() {
     if (_instance == null) {
-      MapperContainer.globals.use(_instance = TypedChannelMapper._());
+      MapperContainer.globals.use(_instance = ChannelConfigMapper._());
       ConsoleChannelMapper.ensureInitialized();
       DailyFileChannelMapper.ensureInitialized();
       StackChannelMapper.ensureInitialized();
+      SamplingChannelMapper.ensureInitialized();
       WebhookChannelMapper.ensureInitialized();
     }
     return _instance!;
   }
 
   @override
-  final String id = 'TypedChannel';
+  final String id = 'ChannelConfig';
 
-  static String? _$name(TypedChannel v) => v.name;
-  static const Field<TypedChannel, String> _f$name = Field(
+  static String? _$name(ChannelConfig v) => v.name;
+  static const Field<ChannelConfig, String> _f$name = Field(
     'name',
     _$name,
     opt: true,
   );
-  static LogMessageFormatter? _$formatter(TypedChannel v) => v.formatter;
-  static const Field<TypedChannel, LogMessageFormatter> _f$formatter = Field(
+  static LogMessageFormatter? _$formatter(ChannelConfig v) => v.formatter;
+  static const Field<ChannelConfig, LogMessageFormatter> _f$formatter = Field(
     'formatter',
     _$formatter,
     opt: true,
   );
 
   @override
-  final MappableFields<TypedChannel> fields = const {
+  final MappableFields<ChannelConfig> fields = const {
     #name: _f$name,
     #formatter: _f$formatter,
   };
 
-  static TypedChannel _instantiate(DecodingData data) {
-    throw MapperException.missingConstructor('TypedChannel');
+  static ChannelConfig _instantiate(DecodingData data) {
+    throw MapperException.missingConstructor('ChannelConfig');
   }
 
   @override
   final Function instantiate = _instantiate;
 
-  static TypedChannel fromMap(Map<String, dynamic> map) {
-    return ensureInitialized().decodeMap<TypedChannel>(map);
+  static ChannelConfig fromMap(Map<String, dynamic> map) {
+    return ensureInitialized().decodeMap<ChannelConfig>(map);
   }
 
-  static TypedChannel fromJson(String json) {
-    return ensureInitialized().decodeJson<TypedChannel>(json);
+  static ChannelConfig fromJson(String json) {
+    return ensureInitialized().decodeJson<ChannelConfig>(json);
   }
 }
 
-mixin TypedChannelMappable {
+mixin ChannelConfigMappable {
   String toJson();
   Map<String, dynamic> toMap();
-  TypedChannelCopyWith<TypedChannel, TypedChannel, TypedChannel> get copyWith;
+  ChannelConfigCopyWith<ChannelConfig, ChannelConfig, ChannelConfig>
+  get copyWith;
 }
 
-abstract class TypedChannelCopyWith<$R, $In extends TypedChannel, $Out>
+abstract class ChannelConfigCopyWith<$R, $In extends ChannelConfig, $Out>
     implements ClassCopyWith<$R, $In, $Out> {
   $R call({String? name, LogMessageFormatter? formatter});
-  TypedChannelCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
+  ChannelConfigCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
 }
 
 class ConsoleChannelMapper extends ClassMapperBase<ConsoleChannel> {
@@ -79,7 +81,7 @@ class ConsoleChannelMapper extends ClassMapperBase<ConsoleChannel> {
   static ConsoleChannelMapper ensureInitialized() {
     if (_instance == null) {
       MapperContainer.globals.use(_instance = ConsoleChannelMapper._());
-      TypedChannelMapper.ensureInitialized();
+      ChannelConfigMapper.ensureInitialized();
       ConsoleOptionsMapper.ensureInitialized();
     }
     return _instance!;
@@ -182,7 +184,7 @@ extension ConsoleChannelValueCopy<$R, $Out>
 }
 
 abstract class ConsoleChannelCopyWith<$R, $In extends ConsoleChannel, $Out>
-    implements TypedChannelCopyWith<$R, $In, $Out> {
+    implements ChannelConfigCopyWith<$R, $In, $Out> {
   ConsoleOptionsCopyWith<$R, ConsoleOptions, ConsoleOptions> get options;
   @override
   $R call({
@@ -238,7 +240,7 @@ class DailyFileChannelMapper extends ClassMapperBase<DailyFileChannel> {
   static DailyFileChannelMapper ensureInitialized() {
     if (_instance == null) {
       MapperContainer.globals.use(_instance = DailyFileChannelMapper._());
-      TypedChannelMapper.ensureInitialized();
+      ChannelConfigMapper.ensureInitialized();
       DailyFileOptionsMapper.ensureInitialized();
     }
     return _instance!;
@@ -338,7 +340,7 @@ extension DailyFileChannelValueCopy<$R, $Out>
 }
 
 abstract class DailyFileChannelCopyWith<$R, $In extends DailyFileChannel, $Out>
-    implements TypedChannelCopyWith<$R, $In, $Out> {
+    implements ChannelConfigCopyWith<$R, $In, $Out> {
   DailyFileOptionsCopyWith<$R, DailyFileOptions, DailyFileOptions> get options;
   @override
   $R call({
@@ -394,7 +396,7 @@ class StackChannelMapper extends ClassMapperBase<StackChannel> {
   static StackChannelMapper ensureInitialized() {
     if (_instance == null) {
       MapperContainer.globals.use(_instance = StackChannelMapper._());
-      TypedChannelMapper.ensureInitialized();
+      ChannelConfigMapper.ensureInitialized();
     }
     return _instance!;
   }
@@ -496,7 +498,7 @@ extension StackChannelValueCopy<$R, $Out>
 }
 
 abstract class StackChannelCopyWith<$R, $In extends StackChannel, $Out>
-    implements TypedChannelCopyWith<$R, $In, $Out> {
+    implements ChannelConfigCopyWith<$R, $In, $Out> {
   @override
   $R call({
     StackOptions? options,
@@ -539,6 +541,160 @@ class _StackChannelCopyWithImpl<$R, $Out>
   ) => _StackChannelCopyWithImpl<$R2, $Out2>($value, $cast, t);
 }
 
+class SamplingChannelMapper extends ClassMapperBase<SamplingChannel> {
+  SamplingChannelMapper._();
+
+  static SamplingChannelMapper? _instance;
+  static SamplingChannelMapper ensureInitialized() {
+    if (_instance == null) {
+      MapperContainer.globals.use(_instance = SamplingChannelMapper._());
+      ChannelConfigMapper.ensureInitialized();
+    }
+    return _instance!;
+  }
+
+  @override
+  final String id = 'SamplingChannel';
+
+  static SamplingOptions _$options(SamplingChannel v) => v.options;
+  static const Field<SamplingChannel, SamplingOptions> _f$options = Field(
+    'options',
+    _$options,
+  );
+  static String? _$name(SamplingChannel v) => v.name;
+  static const Field<SamplingChannel, String> _f$name = Field(
+    'name',
+    _$name,
+    opt: true,
+  );
+  static LogMessageFormatter? _$formatter(SamplingChannel v) => v.formatter;
+  static const Field<SamplingChannel, LogMessageFormatter> _f$formatter = Field(
+    'formatter',
+    _$formatter,
+    opt: true,
+  );
+
+  @override
+  final MappableFields<SamplingChannel> fields = const {
+    #options: _f$options,
+    #name: _f$name,
+    #formatter: _f$formatter,
+  };
+
+  static SamplingChannel _instantiate(DecodingData data) {
+    return SamplingChannel(
+      data.dec(_f$options),
+      name: data.dec(_f$name),
+      formatter: data.dec(_f$formatter),
+    );
+  }
+
+  @override
+  final Function instantiate = _instantiate;
+
+  static SamplingChannel fromMap(Map<String, dynamic> map) {
+    return ensureInitialized().decodeMap<SamplingChannel>(map);
+  }
+
+  static SamplingChannel fromJson(String json) {
+    return ensureInitialized().decodeJson<SamplingChannel>(json);
+  }
+}
+
+mixin SamplingChannelMappable {
+  String toJson() {
+    return SamplingChannelMapper.ensureInitialized()
+        .encodeJson<SamplingChannel>(this as SamplingChannel);
+  }
+
+  Map<String, dynamic> toMap() {
+    return SamplingChannelMapper.ensureInitialized().encodeMap<SamplingChannel>(
+      this as SamplingChannel,
+    );
+  }
+
+  SamplingChannelCopyWith<SamplingChannel, SamplingChannel, SamplingChannel>
+  get copyWith =>
+      _SamplingChannelCopyWithImpl<SamplingChannel, SamplingChannel>(
+        this as SamplingChannel,
+        $identity,
+        $identity,
+      );
+  @override
+  String toString() {
+    return SamplingChannelMapper.ensureInitialized().stringifyValue(
+      this as SamplingChannel,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return SamplingChannelMapper.ensureInitialized().equalsValue(
+      this as SamplingChannel,
+      other,
+    );
+  }
+
+  @override
+  int get hashCode {
+    return SamplingChannelMapper.ensureInitialized().hashValue(
+      this as SamplingChannel,
+    );
+  }
+}
+
+extension SamplingChannelValueCopy<$R, $Out>
+    on ObjectCopyWith<$R, SamplingChannel, $Out> {
+  SamplingChannelCopyWith<$R, SamplingChannel, $Out> get $asSamplingChannel =>
+      $base.as((v, t, t2) => _SamplingChannelCopyWithImpl<$R, $Out>(v, t, t2));
+}
+
+abstract class SamplingChannelCopyWith<$R, $In extends SamplingChannel, $Out>
+    implements ChannelConfigCopyWith<$R, $In, $Out> {
+  @override
+  $R call({
+    SamplingOptions? options,
+    String? name,
+    LogMessageFormatter? formatter,
+  });
+  SamplingChannelCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
+    Then<$Out2, $R2> t,
+  );
+}
+
+class _SamplingChannelCopyWithImpl<$R, $Out>
+    extends ClassCopyWithBase<$R, SamplingChannel, $Out>
+    implements SamplingChannelCopyWith<$R, SamplingChannel, $Out> {
+  _SamplingChannelCopyWithImpl(super.value, super.then, super.then2);
+
+  @override
+  late final ClassMapperBase<SamplingChannel> $mapper =
+      SamplingChannelMapper.ensureInitialized();
+  @override
+  $R call({
+    SamplingOptions? options,
+    Object? name = $none,
+    Object? formatter = $none,
+  }) => $apply(
+    FieldCopyWithData({
+      if (options != null) #options: options,
+      if (name != $none) #name: name,
+      if (formatter != $none) #formatter: formatter,
+    }),
+  );
+  @override
+  SamplingChannel $make(CopyWithData data) => SamplingChannel(
+    data.get(#options, or: $value.options),
+    name: data.get(#name, or: $value.name),
+    formatter: data.get(#formatter, or: $value.formatter),
+  );
+
+  @override
+  SamplingChannelCopyWith<$R2, SamplingChannel, $Out2> $chain<$R2, $Out2>(
+    Then<$Out2, $R2> t,
+  ) => _SamplingChannelCopyWithImpl<$R2, $Out2>($value, $cast, t);
+}
+
 class WebhookChannelMapper extends ClassMapperBase<WebhookChannel> {
   WebhookChannelMapper._();
 
@@ -546,7 +702,7 @@ class WebhookChannelMapper extends ClassMapperBase<WebhookChannel> {
   static WebhookChannelMapper ensureInitialized() {
     if (_instance == null) {
       MapperContainer.globals.use(_instance = WebhookChannelMapper._());
-      TypedChannelMapper.ensureInitialized();
+      ChannelConfigMapper.ensureInitialized();
       WebhookOptionsMapper.ensureInitialized();
     }
     return _instance!;
@@ -649,7 +805,7 @@ extension WebhookChannelValueCopy<$R, $Out>
 }
 
 abstract class WebhookChannelCopyWith<$R, $In extends WebhookChannel, $Out>
-    implements TypedChannelCopyWith<$R, $In, $Out> {
+    implements ChannelConfigCopyWith<$R, $In, $Out> {
   WebhookOptionsCopyWith<$R, WebhookOptions, WebhookOptions> get options;
   @override
   $R call({

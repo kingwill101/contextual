@@ -3,7 +3,7 @@
   "name": "Contextual",
   "description": "Structured logging for Dart",
   "root": "docs",
-  "mode": "build",
+  "mode": "auto",
   "sidebar": [
     {
       "group": "Getting Started",

@@ -20,7 +20,7 @@ import 'driver/webhook.dart';
 import 'format/formatter_settings.dart';
 import 'format/json.dart';
 
-import 'typed/typed_channel.dart' as typed_channels;
+import 'typed/channel_config.dart' as channels;
 import 'typed/log_config.dart' show TypedLogConfig;
 import 'format/message_formatter.dart';
 import 'format/plain.dart';
@@ -321,16 +321,16 @@ class Logger extends AbstractLogger {
     }
     // Channels
     for (final ch in config.channels) {
-      if (ch is typed_channels.ConsoleChannel) {
+      if (ch is channels.ConsoleChannel) {
         addChannel(ch.name ?? 'console', ConsoleLogDriver(),
             formatter: ch.formatter);
-      } else if (ch is typed_channels.DailyFileChannel) {
-      } else if (ch is typed_channels.DailyFileChannel) {
+      } else if (ch is channels.DailyFileChannel) {
+      } else if (ch is channels.DailyFileChannel) {
         addChannel(
             ch.name ?? 'daily',
             DailyFileLogDriver.fromOptions(ch.options),
             formatter: ch.formatter);
-      } else if (ch is typed_channels.StackChannel) {
+      } else if (ch is channels.StackChannel) {
         // Resolve channel names to existing drivers for the stack
         final drivers = ch.options.channels
             .map((n) => _channels.firstWhere(
@@ -344,7 +344,7 @@ class Logger extends AbstractLogger {
           StackLogDriver.fromOptions(drivers, ignoreExceptions: ch.options.ignoreExceptions),
           formatter: ch.formatter,
         );
-      } else if (ch is typed_channels.SamplingChannel) {
+      } else if (ch is channels.SamplingChannel) {
         final wrapped = _channels.firstWhere(
           (c) => c.name == ch.options.wrappedChannel,
           orElse: () => Channel(name: ch.options.wrappedChannel, driver: ConsoleLogDriver()),
@@ -356,7 +356,7 @@ class Logger extends AbstractLogger {
             formatter: ch.formatter,
           );
         }
-      } else if (ch is typed_channels.WebhookChannel) {
+      } else if (ch is channels.WebhookChannel) {
         addChannel(
             ch.name ?? 'webhook',
             WebhookLogDriver.fromOptions(ch.options),
