@@ -34,7 +34,7 @@ void main() async {
   typedConfig: const TypedLogConfig(
     channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
   ),
-)..addChannel('console', ConsoleLogDriver());
+);
 
   // Log some messages
   logger.info('Hello from Contextual!');
