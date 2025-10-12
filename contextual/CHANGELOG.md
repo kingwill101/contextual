@@ -2,7 +2,7 @@
 ## [2.0.0] - 2025-02-16
 
 ### Breaking Changes
-- Removed map-based LogConfig and ChannelConfig in favor of TypedLogConfig and TypedChannel.
+- Removed map-based configs in favor of TypedLogConfig and ChannelConfig hierarchy.
 - Removed legacy factories and fromConfig constructors.
 - Removed string-keyed driver registration and loader paths.
 
