@@ -46,3 +46,13 @@ Drivers may allocate resources (e.g. file handles, HTTP clients). Logger.shutdow
 - Default is unbatched, synchronous driver dispatch for simplicity.
 - Prefer `await logger.batched()` in high-throughput apps; it generally does not require explicit shutdown in typical server apps.
 - For short-lived CLIs or when using file drivers, call `await logger.shutdown()` to guarantee flush.
+
+
+## Example: Batched + type-targeted logging
+
+```dart
+final logger = await Logger.create();
+await logger.batched(LogSinkConfig(batchSize: 100));
+
+logger.forDriver<ConsoleLogDriver>().info('fast path');
+```
