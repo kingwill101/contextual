@@ -8,7 +8,7 @@
 
 ### Added
 - Typed configuration via TypedLogConfig with dart_mappable support.
-- TypedChannel definitions: ConsoleChannel, DailyFileChannel, WebhookChannel, StackChannel, SamplingChannel.
+- Typed channel declarations: ConsoleChannel, DailyFileChannel, WebhookChannel, StackChannel, SamplingChannel.
 - Driver options classes: ConsoleOptions, DailyFileOptions, WebhookOptions, StackOptions, SamplingOptions.
 - Logger.create(typedConfig: ...) convenience.
 - Type-based selection: logger.forDriver<T>(), plus name-based operator[]
