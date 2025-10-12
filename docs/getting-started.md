@@ -208,4 +208,4 @@ logger.addMiddleware(() => {
 
 - Check out the [API Reference](api/overview) for detailed documentation
 - Learn about [Advanced Features](advanced/middleware)
-- See [Drivers](api/drivers/configuration) for configuration examples
+- Explore [Driver Guides](drivers/daily-file) for configuration examples
