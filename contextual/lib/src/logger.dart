@@ -163,6 +163,12 @@ class Logger extends AbstractLogger {
     return this;
   }
 
+  /// Alias for enableDriverBatching to match docs ergonomics.
+  Future<Logger> batched([LogSinkConfig? config]) => enableDriverBatching(config: config);
+
+  /// Alias for disableDriverBatching to match docs ergonomics.
+  Future<Logger> unbatched() => disableDriverBatching();
+
   /// Creates a new logger with default settings.
   ///
   /// This is a convenience constructor that internally uses [create].
