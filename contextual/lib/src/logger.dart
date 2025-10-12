@@ -442,7 +442,7 @@ class Logger extends AbstractLogger {
   ///
   /// Example:
   ///
-  /// Example: logger.addDriverMiddleware<ConsoleLogDriver>(CustomMiddleware());
+  /// Example: `logger.addDriverMiddleware<ConsoleLogDriver>(CustomMiddleware());`
   ///
   /// Prefer this typed method over string-based registration.
   Logger addDriverMiddleware<T extends LogDriver>(DriverMiddleware middleware) {
