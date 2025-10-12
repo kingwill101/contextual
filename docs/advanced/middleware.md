@@ -12,7 +12,7 @@ Middleware allows transforming or filtering log entries before they reach a driv
 logger.addMiddleware(AddTimestamp());
 
 // Driver-specific
-logger.addDriverMiddleware<ConsoleLogDriver>(SensitiveDataFilter());
+logger.addDriverMiddleware<ConsoleLogDriver>(SensitiveDataFilter()); // generic, no driver name required
 ```
 
 ## Writing Driver Middleware
