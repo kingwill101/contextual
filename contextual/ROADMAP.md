@@ -152,8 +152,8 @@ Goal: Simple and robust batching without requiring shutdown.
 - [x] Remove `src/config.dart` and legacy config loaders
 - [x] Ensure examples use type-first selectors and typed config
 
-- [ ] Acceptance criteria
-  - [ ] Public API surface contains no string driver keys or map options
+- [x] Acceptance criteria
+  - [x] Public API surface contains no string driver keys or map options
 
 ---
 
