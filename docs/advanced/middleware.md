@@ -67,17 +67,13 @@ Driver middleware can transform or filter log entries before they reach specific
 ```dart
 class SensitiveDataFilter implements DriverMiddleware {
   @override
-  Future<LogEntry?> process(LogEntry entry) async {
-    // Filter out sensitive data from the message
-    var filtered = entry.message.replaceAll(
+  FutureOr<DriverMiddlewareResult> handle(LogEntry entry) {
+    final filtered = entry.message.replaceAll(
       RegExp(r'\b\d{4}-\d{4}-\d{4}-\d{4}\b'),
       '[REDACTED]'
     );
-    
-    return LogEntry(
-      entry.record,
-      filtered,
-    );
+
+    return DriverMiddlewareResult.modify(entry.copyWith(message: filtered));
   }
 }
 
