@@ -22,7 +22,8 @@
     {
       "group": "Drivers",
       "pages": [
-        { "title": "Daily File", "href": "/drivers/daily-file" }
+        { "title": "Driver Configuration", "href": "/api/drivers/configuration" },
+        { "title": "Daily File", "href": "/api/drivers/daily-file" }
       ]
     },
     {
