@@ -1,7 +1,9 @@
 {
+  "$schema": "https://schemas.docs.page/config-v1.schema.json",
   "name": "Contextual",
   "description": "Structured logging for Dart",
   "root": "docs",
+  "mode": "build",
   "sidebar": [
     {
       "group": "Getting Started",
