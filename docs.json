@@ -14,9 +14,7 @@
     {
       "group": "API",
       "pages": [
-        { "title": "Overview", "href": "/api/overview" },
-        { "title": "Driver Configuration", "href": "/api/drivers/configuration" },
-        { "title": "Daily File Driver", "href": "/api/drivers/daily-file" }
+        { "title": "Overview", "href": "/api/overview" }
       ]
     },
     {

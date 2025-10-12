@@ -306,11 +306,6 @@ class Logger extends AbstractLogger {
     // Register any other built-in or custom formatters here
   }
 
-  /// Legacy config removed in v2. Use typedConfig(TypedLogConfig) instead.
-  @Deprecated('Removed in v2. Use typedConfig(TypedLogConfig) instead.')
-  Logger legacyConfig(dynamic _) {
-    return this;
-  }
 
   // Overload: accept typed.LogConfig and enumerate typed channels directly
   Logger typedConfig(TypedLogConfig config) {
