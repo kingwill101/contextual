@@ -1,8 +1,7 @@
 name: contextual_ecosystem
 publish_to: none
 environment:
-  sdk: '^3.6.0'
+  sdk: ">=3.9.0 <4.0.0"
 workspace:
   - contextual
   - contextual_shelf
-

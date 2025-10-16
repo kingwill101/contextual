@@ -76,7 +76,7 @@
       "pages": [
         {
           "title": "Installation",
-          "href": "/"
+          "href": "/getting-started"
         },
         {
           "title": "Usage",
@@ -127,31 +127,6 @@
               "href": "/api/drivers/sampling"
             }
           ]
-        }
-      ]
-    },
-    {
-      "group": "Drivers",
-      "pages": [
-        {
-          "title": "Console Driver",
-          "href": "/drivers/console"
-        },
-        {
-          "title": "Daily File Driver",
-          "href": "/drivers/daily-file"
-        },
-        {
-          "title": "Webhook Driver",
-          "href": "/drivers/webhook"
-        },
-        {
-          "title": "Stack Driver",
-          "href": "/drivers/stack"
-        },
-        {
-          "title": "Sampling Driver",
-          "href": "/drivers/sampling"
         }
       ]
     },
