@@ -30,7 +30,7 @@ class WebhookLogDriver extends LogDriver {
   ///
   /// The [endpoint] must be a valid HTTP or HTTPS URL that accepts POST requests
   /// with JSON payloads.
-  
+
   /// Typed options constructor for v2
   factory WebhookLogDriver.fromOptions(WebhookOptions options) {
     return WebhookLogDriver(options.url, headers: options.headers ?? const {});
@@ -41,9 +41,7 @@ class WebhookLogDriver extends LogDriver {
   @override
   Future<void> log(LogEntry entry) async {
     final formattedMessage = entry.toString();
-    final body = jsonEncode({
-      'entry': formattedMessage,
-    });
+    final body = jsonEncode({'entry': formattedMessage});
 
     print('[WebhookLogDriver] Sending log: $formattedMessage');
     try {
@@ -60,7 +58,8 @@ class WebhookLogDriver extends LogDriver {
 
       if (response.statusCode != 200) {
         print(
-            '[WebhookLogDriver Error] Failed to send log. Status code: ${response.statusCode}');
+          '[WebhookLogDriver Error] Failed to send log. Status code: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('[WebhookLogDriver Error] Exception occurred: $e');

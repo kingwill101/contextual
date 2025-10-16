@@ -43,7 +43,6 @@ class SamplingChannel extends ChannelConfig with SamplingChannelMappable {
   const SamplingChannel(this.options, {super.name, super.formatter});
 }
 
-
 @MappableClass()
 class WebhookChannel extends ChannelConfig with WebhookChannelMappable {
   final WebhookOptions options;

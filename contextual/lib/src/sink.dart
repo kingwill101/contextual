@@ -157,11 +157,10 @@ class LogSink implements Sink {
   ///
   /// Parameters:
   /// - [config]: Optional configuration for the sink behavior
-  LogSink({
-    LogSinkConfig? config,
-  })  : batchSize = config?.batchSize ?? 10,
-        autoFlushInterval = config?.flushInterval ?? const Duration(seconds: 1),
-        autoCloseAfter = config?.autoCloseAfter ?? const Duration(seconds: 5);
+  LogSink({LogSinkConfig? config})
+    : batchSize = config?.batchSize ?? 10,
+      autoFlushInterval = config?.flushInterval ?? const Duration(seconds: 1),
+      autoCloseAfter = config?.autoCloseAfter ?? const Duration(seconds: 5);
 
   /// Adds a new log operation to the sink.
   ///

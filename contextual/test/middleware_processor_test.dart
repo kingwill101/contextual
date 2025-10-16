@@ -47,7 +47,8 @@ class AsyncModifyMiddleware extends DriverMiddleware {
   FutureOr<DriverMiddlewareResult> handle(LogEntry entry) async {
     await Future.delayed(Duration(milliseconds: 50)); // Simulate async delay
     return DriverMiddlewareResult.modify(
-        entry.copyWith(message: '${entry.message}$appendText'));
+      entry.copyWith(message: '${entry.message}$appendText'),
+    );
   }
 }
 
@@ -64,17 +65,11 @@ void main() {
       // Create a LogEntry with the formatted message
       final entry = LogEntry(record, 'Initial message');
 
-      final globalMiddleware = [
-        ModifyMiddleware(' [Global]'),
-      ];
+      final globalMiddleware = [ModifyMiddleware(' [Global]')];
 
-      final channelMiddleware = [
-        ModifyMiddleware(' [Channel]'),
-      ];
+      final channelMiddleware = [ModifyMiddleware(' [Channel]')];
 
-      final driverMiddleware = [
-        ModifyMiddleware(' [Driver]'),
-      ];
+      final driverMiddleware = [ModifyMiddleware(' [Driver]')];
 
       final result = await processDriverMiddlewares(
         entry: entry,
@@ -99,9 +94,7 @@ void main() {
         'Sensitive data',
       );
 
-      final stopMiddleware = [
-        StopMiddleware('Sensitive'),
-      ];
+      final stopMiddleware = [StopMiddleware('Sensitive')];
 
       final result = await processDriverMiddlewares(
         entry: entry,
@@ -159,39 +152,36 @@ void main() {
     });
 
     test(
-        'driver-specific middlewares are applied after global and channel middlewares',
-        () async {
-      final entry = LogEntry(
-        LogRecord(
-          level: Level.info,
-          message: 'Initial message',
-          time: DateTime.now(),
-        ),
-        'Initial message',
-      );
+      'driver-specific middlewares are applied after global and channel middlewares',
+      () async {
+        final entry = LogEntry(
+          LogRecord(
+            level: Level.info,
+            message: 'Initial message',
+            time: DateTime.now(),
+          ),
+          'Initial message',
+        );
 
-      final globalMiddleware = [
-        ModifyMiddleware(' [Global]'),
-      ];
+        final globalMiddleware = [ModifyMiddleware(' [Global]')];
 
-      final channelMiddleware = [
-        ModifyMiddleware(' [Channel]'),
-      ];
+        final channelMiddleware = [ModifyMiddleware(' [Channel]')];
 
-      final driverMiddleware = [
-        ModifyMiddleware(' [Driver]'),
-      ];
+        final driverMiddleware = [ModifyMiddleware(' [Driver]')];
 
-      final result = await processDriverMiddlewares(
-        entry: entry,
-        globalMiddlewares: globalMiddleware,
-        channelMiddlewares: channelMiddleware,
-        driverMiddlewares: driverMiddleware,
-      );
+        final result = await processDriverMiddlewares(
+          entry: entry,
+          globalMiddlewares: globalMiddleware,
+          channelMiddlewares: channelMiddleware,
+          driverMiddlewares: driverMiddleware,
+        );
 
-      expect(result?.message,
-          equals('Initial message [Global] [Channel] [Driver]'));
-    });
+        expect(
+          result?.message,
+          equals('Initial message [Global] [Channel] [Driver]'),
+        );
+      },
+    );
 
     test('middleware can handle async operations', () async {
       final entry = LogEntry(
@@ -203,9 +193,7 @@ void main() {
         'Initial message',
       );
 
-      final asyncMiddleware = [
-        AsyncModifyMiddleware(' [Async]'),
-      ];
+      final asyncMiddleware = [AsyncModifyMiddleware(' [Async]')];
 
       final result = await processDriverMiddlewares(
         entry: entry,

@@ -31,10 +31,7 @@ void main() {
 
     test('handles null values in context with default missing value', () {
       context.add('key', null);
-      final result = interpolateMessage(
-        'Value: {key}',
-        context,
-      );
+      final result = interpolateMessage('Value: {key}', context);
       expect(result, equals('Value: {key}'));
     });
 
@@ -50,14 +47,15 @@ void main() {
           'profile': {
             'name': 'John',
             'age': 30,
-            'address': {'street': 'Main St', 'city': 'New York'}
-          }
-        }
+            'address': {'street': 'Main St', 'city': 'New York'},
+          },
+        },
       };
       context.add('data', complexObject);
       final result = interpolateMessage(
-          'User {data.user.profile.name} is {data.user.profile.age} years old and lives in {data.user.profile.address.city}',
-          context);
+        'User {data.user.profile.name} is {data.user.profile.age} years old and lives in {data.user.profile.address.city}',
+        context,
+      );
       expect(result, equals('User John is 30 years old and lives in New York'));
     });
   });
@@ -66,22 +64,22 @@ void main() {
     test('retrieves nested value using dot notation', () {
       final map = {
         'user': {
-          'profile': {'name': 'John'}
-        }
+          'profile': {'name': 'John'},
+        },
       };
       expect(map.dot<String>('user.profile.name'), equals('John'));
     });
 
     test('returns null for non-existent path', () {
       final map = {
-        'user': {'name': 'John'}
+        'user': {'name': 'John'},
       };
       expect(map.dot<String>('user.profile.age'), isNull);
     });
 
     test('returns default value for non-existent path', () {
       final map = {
-        'user': {'name': 'John'}
+        'user': {'name': 'John'},
       };
       expect(map.dot<int>('user.age', 25), equals(25));
     });

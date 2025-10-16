@@ -73,7 +73,7 @@ enum Level {
     error,
     critical,
     alert,
-    emergency
+    emergency,
   ];
 }
 

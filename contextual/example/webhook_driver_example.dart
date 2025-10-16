@@ -6,9 +6,7 @@ void main() async {
   final logger = Logger()
     ..addChannel(
       'webhook',
-      WebhookLogDriver(
-        Uri.parse('https://webhook.example.com/logs'),
-      ),
+      WebhookLogDriver(Uri.parse('https://webhook.example.com/logs')),
       formatter: JsonLogFormatter(), // Use JSON for webhook payloads
     );
 
@@ -17,26 +15,30 @@ void main() async {
     logger.info('System startup completed');
 
     // Log with structured data
-    logger.withContext({
-      'environment': 'production',
-      'region': 'us-east-1',
-      'instance': 'web-server-01',
-    }).info('Server health check passed');
+    logger
+        .withContext({
+          'environment': 'production',
+          'region': 'us-east-1',
+          'instance': 'web-server-01',
+        })
+        .info('Server health check passed');
 
     // Log error conditions
     try {
       throw Exception('Service unavailable');
     } catch (e, stack) {
-      logger.withContext({
-        'error': {
-          'type': e.runtimeType.toString(),
-          'message': e.toString(),
-          'stack': stack.toString(),
-        },
-        'service': 'api',
-        'endpoint': '/users',
-        'method': 'POST',
-      }).error('API request failed');
+      logger
+          .withContext({
+            'error': {
+              'type': e.runtimeType.toString(),
+              'message': e.toString(),
+              'stack': stack.toString(),
+            },
+            'service': 'api',
+            'endpoint': '/users',
+            'method': 'POST',
+          })
+          .error('API request failed');
     }
 
     // Log performance metrics
@@ -67,10 +69,9 @@ void main() async {
 
     try {
       // Log to both Slack and Datadog
-      multiLogger.withContext({
-        'alert_level': 'high',
-        'component': 'payment_service',
-      }).alert('Payment processing system is down');
+      multiLogger
+          .withContext({'alert_level': 'high', 'component': 'payment_service'})
+          .alert('Payment processing system is down');
     } finally {
       // Ensure proper cleanup of the second logger
       await multiLogger.shutdown();

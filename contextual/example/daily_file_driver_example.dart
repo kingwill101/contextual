@@ -13,7 +13,8 @@ void main() async {
         flushInterval: Duration(milliseconds: 1), // Flush logs every second
       ),
       formatter: JsonLogFormatter(
-          prettyPrint: true), // Use JSON for structured logging
+        prettyPrint: true,
+      ), // Use JSON for structured logging
     );
 
   // logger.onRecord.listen((record) {
@@ -25,30 +26,32 @@ void main() async {
     logger.info('Application started');
 
     // Log with context data
-    logger.withContext({
-      'server': 'web-01',
-      'environment': 'production',
-      'version': '1.2.3',
-    }).info('Server initialization complete');
+    logger
+        .withContext({
+          'server': 'web-01',
+          'environment': 'production',
+          'version': '1.2.3',
+        })
+        .info('Server initialization complete');
 
     // Simulate multiple days of logging
     final now = DateTime.now();
 
     // Yesterday's logs
-    logger.withContext({
-      'date': now.subtract(Duration(days: 1)).toIso8601String(),
-      'status': 'historical',
-    }).info('This log entry is from yesterday');
+    logger
+        .withContext({
+          'date': now.subtract(Duration(days: 1)).toIso8601String(),
+          'status': 'historical',
+        })
+        .info('This log entry is from yesterday');
 
     // Today's logs with various levels
     logger.debug('Debug message for troubleshooting');
     logger.warning('System resources running low');
     logger.error(
-        'Failed to process request',
-        Context({
-          'request_id': '123',
-          'endpoint': '/api/users',
-        }));
+      'Failed to process request',
+      Context({'request_id': '123', 'endpoint': '/api/users'}),
+    );
 
     // Log structured data
     logger.info({

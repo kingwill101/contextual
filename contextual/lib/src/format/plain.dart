@@ -45,8 +45,10 @@ class PlainTextLogFormatter extends LogMessageFormatter {
         ? record.context.all()
         : record.context.visible();
 
-    final formattedMessage =
-        interpolateMessage(record.message, Context.from(contextData));
+    final formattedMessage = interpolateMessage(
+      record.message,
+      Context.from(contextData),
+    );
 
     StringBuffer buffer = StringBuffer();
 
