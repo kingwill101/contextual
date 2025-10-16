@@ -29,12 +29,12 @@ final logger = await Logger.create(
     ],
   ),
 );
-
-// Logs will be written to files like:
-// - logs/app-2024-02-15.log
-// - logs/app-2024-02-14.log
-// etc.
 ```
+
+Logs will be written to files like:
+- logs/app-2024-02-15.log
+- logs/app-2024-02-14.log
+- etc.
 
 ## Configuration Options
 
@@ -102,24 +102,25 @@ logger.forDriver<DailyFileLogDriver>().info('First message of the new day');
 
 Old log files are automatically cleaned up based on the `retentionDays` setting:
 
-```dart
-// These files exist:
-// logs/app-2024-02-15.log (today)
-// logs/app-2024-02-14.log (1 day old)
-// logs/app-2024-02-01.log (14 days old)
-// logs/app-2024-01-15.log (30 days old)
+These files exist:
+- logs/app-2024-02-15.log (today)
+- logs/app-2024-02-14.log (1 day old)
+- logs/app-2024-02-01.log (14 days old)
+- logs/app-2024-01-15.log (30 days old)
 
+```dart
 final driver = DailyFileLogDriver(
   'logs/app',
   retentionDays: 14, // Keep files for 14 days
 );
 
-// After cleanup:
-// logs/app-2024-02-15.log (kept)
-// logs/app-2024-02-14.log (kept)
-// logs/app-2024-02-01.log (kept)
-// logs/app-2024-01-15.log (deleted - too old)
 ```
+
+After cleanup:
+- logs/app-2024-02-15.log (kept)
+- logs/app-2024-02-14.log (kept)
+- logs/app-2024-02-01.log (kept)
+- logs/app-2024-01-15.log (deleted - too old)
 
 ## Performance Optimization
 
@@ -200,6 +201,7 @@ final logger = await Logger.create(
 );
 ```
 
+```dart
 try {
   // Your application code
 } catch (e) {
@@ -226,6 +228,7 @@ final logger = await Logger.create(
 );
 ```
 
+```dart
 // ... use logger ...
 
 // Before application exit:
