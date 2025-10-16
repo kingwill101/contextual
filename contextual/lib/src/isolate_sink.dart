@@ -53,12 +53,10 @@ class IsolateLogSink implements Sink {
   Timer? _autoCloseTimer;
   bool _isFlushing = false;
 
-  IsolateLogSink({
-    required this.processor,
-    LogSinkConfig? config,
-  })  : batchSize = config?.batchSize ?? 10,
-        autoFlushInterval = config?.flushInterval ?? const Duration(seconds: 1),
-        autoCloseAfter = const Duration(seconds: 5);
+  IsolateLogSink({required this.processor, LogSinkConfig? config})
+    : batchSize = config?.batchSize ?? 10,
+      autoFlushInterval = config?.flushInterval ?? const Duration(seconds: 1),
+      autoCloseAfter = const Duration(seconds: 5);
 
   /// Starts the isolate and initializes the sink.
   ///

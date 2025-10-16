@@ -28,17 +28,14 @@ class CustomFormat2 extends LogMessageFormatter {
 void main() async {
   final logger = Logger()
     // Console channel with pretty formatting for human readability
-    ..addChannel(
-      'console',
-      ConsoleLogDriver(),
-      formatter: PrettyLogFormatter(),
-    )
+    ..addChannel('console', ConsoleLogDriver(), formatter: PrettyLogFormatter())
     // File channel with JSON formatting for machine processing
     ..addChannel(
       'file',
       DailyFileLogDriver('logs/app.log'),
-      formatter:
-          JsonLogFormatter(prettyPrint: true), // Pretty print for readability
+      formatter: JsonLogFormatter(
+        prettyPrint: true,
+      ), // Pretty print for readability
     )
     // Webhook channel with plain text for simple HTTP posting
     ..addChannel(
@@ -51,12 +48,14 @@ void main() async {
   logger.info('This message uses different formats per channel');
 
   // Add context to demonstrate structured data handling
-  logger.withContext({
-    'requestId': 'req-123',
-    'user': 'jane_doe',
-    'action': 'checkout',
-    'amount': 99.99,
-  }).info('Processing checkout');
+  logger
+      .withContext({
+        'requestId': 'req-123',
+        'user': 'jane_doe',
+        'action': 'checkout',
+        'amount': 99.99,
+      })
+      .info('Processing checkout');
 
   // Target specific channels
   logger['console'].debug('Console only - with pretty colors');

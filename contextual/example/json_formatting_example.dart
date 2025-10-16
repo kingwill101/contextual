@@ -13,11 +13,13 @@ void main() async {
   logger.info('Application initialized');
 
   // Logging with context data
-  logger.withContext({
-    'requestId': 'req-${DateTime.now().millisecondsSinceEpoch}',
-    'user': 'alice',
-    'role': 'admin',
-  }).info('User session started');
+  logger
+      .withContext({
+        'requestId': 'req-${DateTime.now().millisecondsSinceEpoch}',
+        'user': 'alice',
+        'role': 'admin',
+      })
+      .info('User session started');
 
   // Logging structured data
   logger.info({
@@ -42,11 +44,13 @@ void main() async {
 
   // Multiple context layers
   logger
-      .withContext({'service': 'auth'}).withContext({'action': 'verify'}).info({
-    'event': 'token_verification',
-    'result': 'success',
-    'method': 'oauth2',
-  });
+      .withContext({'service': 'auth'})
+      .withContext({'action': 'verify'})
+      .info({
+        'event': 'token_verification',
+        'result': 'success',
+        'method': 'oauth2',
+      });
 
   await logger.shutdown();
 }

@@ -74,7 +74,10 @@ abstract class DailyFileLogDriver extends LogDriver {
   }) = IsolateDailyFileLogDriver;
 
   /// Typed options constructor for v2
-  factory DailyFileLogDriver.fromOptions(DailyFileOptions options, {bool useIsolate = false}) {
+  factory DailyFileLogDriver.fromOptions(
+    DailyFileOptions options, {
+    bool useIsolate = false,
+  }) {
     return useIsolate
         ? DailyFileLogDriver.withIsolateOptimization(
             options.path,
@@ -87,7 +90,6 @@ abstract class DailyFileLogDriver extends LogDriver {
             flushInterval: options.flushInterval,
           );
   }
-
 
   /// Protected constructor for implementations
   DailyFileLogDriver._(
@@ -209,9 +211,9 @@ class StandardDailyFileLogDriver extends DailyFileLogDriver {
     int? retentionDays,
     Duration? flushInterval,
   }) : super._(
-          retentionDays: retentionDays ?? 14,
-          flushInterval: flushInterval ?? const Duration(milliseconds: 500),
-        );
+         retentionDays: retentionDays ?? 14,
+         flushInterval: flushInterval ?? const Duration(milliseconds: 500),
+       );
 
   @override
   Future<void> writeEntries(List<LogEntry> entries) async {
@@ -232,9 +234,9 @@ class IsolateDailyFileLogDriver extends DailyFileLogDriver {
     int? retentionDays,
     Duration? flushInterval,
   }) : super._(
-          retentionDays: retentionDays ?? 14,
-          flushInterval: flushInterval ?? const Duration(milliseconds: 500),
-        ) {
+         retentionDays: retentionDays ?? 14,
+         flushInterval: flushInterval ?? const Duration(milliseconds: 500),
+       ) {
     _initializeIsolate();
   }
 

@@ -44,5 +44,5 @@ class FormatterSettings {
     this.includeHidden = false,
     DateFormat? timestampFormat,
   }) : timestampFormat =
-            timestampFormat ?? DateFormat('yyyy-MM-dd HH:mm:ss.SSS');
+           timestampFormat ?? DateFormat('yyyy-MM-dd HH:mm:ss.SSS');
 }

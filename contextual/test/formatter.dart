@@ -22,11 +22,14 @@ void main() {
 
     test('should format log messages in plain text', () {
       final context = Context.from({'key': 'value'});
-      final formattedMessage = formatter.format(LogRecord(
+      final formattedMessage = formatter.format(
+        LogRecord(
           time: DateTime.now(),
           level: Level.info,
           message: "Test message",
-          context: context));
+          context: context,
+        ),
+      );
       expect(formattedMessage, contains(Level.info));
       expect(formattedMessage, contains('Test message'));
       expect(formattedMessage, contains('Context:'));
@@ -49,10 +52,11 @@ void main() {
       final context = Context.from({'key': 'value'});
       final formattedMessage = formatter.format(
         LogRecord(
-            time: DateTime.now(),
-            level: Level.info,
-            message: "Test message",
-            context: context),
+          time: DateTime.now(),
+          level: Level.info,
+          message: "Test message",
+          context: context,
+        ),
       );
       //assert valid json
       expect(formattedMessage, isA<String>());
@@ -76,11 +80,14 @@ void main() {
     test('should return message as-is', () {
       final context = Context();
       final message = 'Raw message';
-      final formattedMessage = formatter.format(LogRecord(
+      final formattedMessage = formatter.format(
+        LogRecord(
           time: DateTime.now(),
           level: Level.info,
           message: "Test message",
-          context: context));
+          context: context,
+        ),
+      );
       expect(formattedMessage, equals(message));
     });
   });
@@ -89,13 +96,16 @@ void main() {
     late MapFormatter formatter;
 
     setUp(() {
-      formatter = MapFormatter(valueFormatters: {
-        String: StringFormatter(),
-        int: IntFormatter(),
-        DateTime: DateTimeFormatter(),
-        User: UserFormatter(),
-        Location: LocationFormatter(),
-      }, sorted: false);
+      formatter = MapFormatter(
+        valueFormatters: {
+          String: StringFormatter(),
+          int: IntFormatter(),
+          DateTime: DateTimeFormatter(),
+          User: UserFormatter(),
+          Location: LocationFormatter(),
+        },
+        sorted: false,
+      );
     });
 
     test('should format map with custom formatters', () {
@@ -106,13 +116,16 @@ void main() {
         'location': (latitude: 40.7128, longitude: -74.0060),
         'details': {
           'ip': '192.168.1.1',
-          'devices': ['laptop', 'mobile']
+          'devices': ['laptop', 'mobile'],
         },
         'success': true,
-        'attempts': 3
+        'attempts': 3,
       };
-      final formattedMessage =
-          formatter.format(Level.info, complexMapMessage, context);
+      final formattedMessage = formatter.format(
+        Level.info,
+        complexMapMessage,
+        context,
+      );
 
       // Assert the formatted message
       expect(formattedMessage, isA<String>());
@@ -121,8 +134,10 @@ void main() {
       // expect(formattedMessage, equals(expectedMessage));
       expect(formattedMessage, contains('{"name": "Alice", "age": 30}'));
 
-      expect(formattedMessage,
-          contains('{"latitude": 40.7128, "longitude": -74.006}'));
+      expect(
+        formattedMessage,
+        contains('{"latitude": 40.7128, "longitude": -74.006}'),
+      );
     });
   });
 }

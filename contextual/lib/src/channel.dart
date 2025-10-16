@@ -27,10 +27,9 @@ class Channel<T extends LogDriver> {
     LogMessageFormatter? formatter,
     List<DriverMiddleware>? middlewares,
   }) => Channel<T>(
-        name: name ?? this.name,
-        driver: driver ?? this.driver,
-        formatter: formatter ?? this.formatter,
-        middlewares: middlewares ?? this.middlewares,
-      );
+    name: name ?? this.name,
+    driver: driver ?? this.driver,
+    formatter: formatter ?? this.formatter,
+    middlewares: middlewares ?? this.middlewares,
+  );
 }
-

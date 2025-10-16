@@ -44,14 +44,8 @@ class LogEntry {
   ///
   /// This is useful when middleware needs to modify either the raw data
   /// or the formatted message without affecting the original entry.
-  LogEntry copyWith({
-    LogRecord? record,
-    String? message,
-  }) {
-    return LogEntry(
-      record ?? this.record,
-      message ?? this.message,
-    );
+  LogEntry copyWith({LogRecord? record, String? message}) {
+    return LogEntry(record ?? this.record, message ?? this.message);
   }
 
   /// Converts the log entry to a JSON-compatible map.
@@ -60,7 +54,7 @@ class LogEntry {
   /// formatted message. This is useful for serialization or when
   /// passing log entries between systems.
   Map<String, dynamic> toJson() => {
-        'record': record.toJson(),
-        'message': message,
-      };
+    'record': record.toJson(),
+    'message': message,
+  };
 }

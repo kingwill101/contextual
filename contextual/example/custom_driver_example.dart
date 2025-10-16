@@ -102,11 +102,9 @@ void main() async {
   // Log some messages to TCP
   tcpLogger.info('Connected to TCP server');
   tcpLogger.error(
-      'Connection lost',
-      Context({
-        'reason': 'timeout',
-        'attempts': 3,
-      }));
+    'Connection lost',
+    Context({'reason': 'timeout', 'attempts': 3}),
+  );
 
   // Create logger with custom aggregating driver
   final aggregatingLogger = Logger()
@@ -129,14 +127,11 @@ void main() async {
   final filteringLogger = Logger()
     ..addChannel(
       'filtered',
-      FilteringLogDriver(
-        ConsoleLogDriver(),
-        (entry) {
-          // Only log errors and messages containing 'important'
-          return entry.record.level.index >= Level.error.index ||
-              entry.message.toLowerCase().contains('important');
-        },
-      ),
+      FilteringLogDriver(ConsoleLogDriver(), (entry) {
+        // Only log errors and messages containing 'important'
+        return entry.record.level.index >= Level.error.index ||
+            entry.message.toLowerCase().contains('important');
+      }),
       formatter: PlainTextLogFormatter(),
     );
 

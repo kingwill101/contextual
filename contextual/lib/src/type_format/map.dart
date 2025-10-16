@@ -40,9 +40,9 @@ class MapFormatter extends LogTypeFormatter<Map> {
     Map<Type, LogTypeFormatter>? valueFormatters,
     bool formatKeys = false,
     bool sorted = true,
-  })  : _valueFormatters = valueFormatters ?? const {},
-        _formatKeys = formatKeys,
-        _sorted = sorted;
+  }) : _valueFormatters = valueFormatters ?? const {},
+       _formatKeys = formatKeys,
+       _sorted = sorted;
 
   @override
   String format(Level level, Map message, Context context) {
@@ -50,8 +50,10 @@ class MapFormatter extends LogTypeFormatter<Map> {
     buffer.write('{');
 
     final entries = _sorted
-        ? Map.fromEntries(message.entries.toList()
-          ..sort((a, b) => a.key.toString().compareTo(b.key.toString())))
+        ? Map.fromEntries(
+            message.entries.toList()
+              ..sort((a, b) => a.key.toString().compareTo(b.key.toString())),
+          )
         : message;
 
     var first = true;

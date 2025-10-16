@@ -38,10 +38,7 @@ class JsonLogFormatter extends LogMessageFormatter {
   /// If [prettyPrint] is true, the JSON output will be formatted with
   /// indentation and line breaks for better readability. Defaults to false
   /// for more compact output.
-  JsonLogFormatter({
-    super.settings,
-    this.prettyPrint = false,
-  });
+  JsonLogFormatter({super.settings, this.prettyPrint = false});
 
   /// Whether to format the JSON output with indentation and line breaks.
   final bool prettyPrint;
@@ -65,8 +62,10 @@ class JsonLogFormatter extends LogMessageFormatter {
       logEntry['prefix'] = record.context.get('prefix');
     }
 
-    logEntry['message'] =
-        interpolateMessage(record.message, Context.from(contextData));
+    logEntry['message'] = interpolateMessage(
+      record.message,
+      Context.from(contextData),
+    );
 
     if (settings.includeContext) {
       logEntry['context'] = contextData;

@@ -9,7 +9,8 @@ class XmlLogFormatter extends LogMessageFormatter {
     buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
     buffer.writeln('<log>');
     buffer.writeln(
-        '  <timestamp>${DateTime.now().toIso8601String()}</timestamp>');
+      '  <timestamp>${DateTime.now().toIso8601String()}</timestamp>',
+    );
     buffer.writeln('  <level>${record.level}</level>');
     buffer.writeln('  <message>${_escapeXml(record.message)}</message>');
 
@@ -18,7 +19,8 @@ class XmlLogFormatter extends LogMessageFormatter {
       buffer.writeln('  <context>');
       for (final entry in contextData.entries) {
         buffer.writeln(
-            '    <${entry.key}>${_escapeXml(entry.value.toString())}</${entry.key}>');
+          '    <${entry.key}>${_escapeXml(entry.value.toString())}</${entry.key}>',
+        );
       }
       buffer.writeln('  </context>');
     }
@@ -104,18 +106,14 @@ class MetricsLogFormatter extends LogMessageFormatter {
 /// This example demonstrates how to create and use custom log formatters.
 void main() async {
   // Create logger with XML formatter
-  final xmlLogger = Logger(
-    formatter: XmlLogFormatter(),
-  )..addChannel('console', ConsoleLogDriver());
+  final xmlLogger = Logger(formatter: XmlLogFormatter())
+    ..addChannel('console', ConsoleLogDriver());
 
   // Log with XML formatting
   xmlLogger.info(
-      'User login successful',
-      Context({
-        'userId': '12345',
-        'role': 'admin',
-        'ip': '192.168.1.1',
-      }));
+    'User login successful',
+    Context({'userId': '12345', 'role': 'admin', 'ip': '192.168.1.1'}),
+  );
 
   // Create logger with CSV formatter
   final csvLogger = Logger(
@@ -127,45 +125,43 @@ void main() async {
 
   // Log with CSV formatting
   csvLogger.info(
-      'Configuration changed',
-      Context({
-        'component': 'database',
-        'setting': 'max_connections',
-        'old_value': 100,
-        'new_value': 200,
-      }));
+    'Configuration changed',
+    Context({
+      'component': 'database',
+      'setting': 'max_connections',
+      'old_value': 100,
+      'new_value': 200,
+    }),
+  );
 
   // Create logger with metrics formatter
-  final metricsLogger = Logger(
-    formatter: MetricsLogFormatter(),
-  )..addChannel('statsd', ConsoleLogDriver());
+  final metricsLogger = Logger(formatter: MetricsLogFormatter())
+    ..addChannel('statsd', ConsoleLogDriver());
 
   // Log metrics
   metricsLogger.info(
-      'System metrics',
-      Context({
-        'metric': 'system.cpu.usage',
-        'value': 45.2,
-        'host': 'web-01',
-        'datacenter': 'us-east',
-      }));
+    'System metrics',
+    Context({
+      'metric': 'system.cpu.usage',
+      'value': 45.2,
+      'host': 'web-01',
+      'datacenter': 'us-east',
+    }),
+  );
 
   metricsLogger.info(
-      'Application metrics',
-      Context({
-        'metric': 'app.requests.total',
-        'value': 1234,
-        'endpoint': '/api/users',
-        'method': 'GET',
-      }));
+    'Application metrics',
+    Context({
+      'metric': 'app.requests.total',
+      'value': 1234,
+      'endpoint': '/api/users',
+      'method': 'GET',
+    }),
+  );
 
   // Multiple formatters example
   final multiLogger = Logger()
-    ..addChannel(
-      'xml',
-      ConsoleLogDriver(),
-      formatter: XmlLogFormatter(),
-    )
+    ..addChannel('xml', ConsoleLogDriver(), formatter: XmlLogFormatter())
     ..addChannel(
       'csv',
       DailyFileLogDriver('logs/audit.log'),
@@ -179,13 +175,14 @@ void main() async {
 
   // Log to all channels - each using its own formatter
   multiLogger.info(
-      'System status update',
-      Context({
-        'metric': 'system.status',
-        'value': 1,
-        'status': 'healthy',
-        'uptime': '5d 12h',
-      }));
+    'System status update',
+    Context({
+      'metric': 'system.status',
+      'value': 1,
+      'status': 'healthy',
+      'uptime': '5d 12h',
+    }),
+  );
 
   // Cleanup
   await xmlLogger.shutdown();
