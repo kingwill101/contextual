@@ -1,43 +1,63 @@
 ---
 title: Contextual
 description: Structured, typed, ergonomic logging for Dart
+showPageTitle: false
+socialPreview: https://raw.githubusercontent.com/kingwill101/contextual/main/screenshot.png
 ---
 
 # Contextual
 
-Contextual is a powerful, flexible logging system for Dart that provides typed configuration, structured logging, multiple output channels, and ergonomic APIs.
+<Info>
+Contextual is a powerful, flexible logging system for Dart that provides **typed configuration**, **structured logging**, **multiple output channels**, and **ergonomic APIs**.
+</Info>
 
 ## Installation
 
-Add Contextual to your project by adding it to your `pubspec.yaml`:
-
-```yaml
+<CodeGroup>
+```yaml pubspec.yaml
 dependencies:
-  contextual: ^latest_version
+  contextual: ^2.0.0
 ```
 
-Or install it using the Dart package manager:
-
-```bash
+```bash Terminal
 dart pub add contextual
 ```
+</CodeGroup>
 
 ## Quick start
+
+Get started with Contextual in just a few lines:
 
 ```dart
 import 'package:contextual/contextual.dart';
 
 void main() async {
-  final logger = await Logger.create()
-    ..addChannel('console', ConsoleLogDriver());
+  final logger = await Logger.create(
+    config: LogConfig(
+      channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    ),
+  );
 
   logger.info('Hello from Contextual!');
 }
 ```
 
+<Info>
+**That's it!** Your logger is now ready to use with console output, pretty formatting, and structured logging capabilities.
+</Info>
+
 ## Next steps
 
-- API overview: [API Reference](/api/overview)
-- Advanced topics: [Middleware](/advanced/middleware) · [Batching & shutdown](/advanced/batching-and-shutdown)
-- Drivers: [Daily file](/api/drivers/daily-file) · [Shelf integration](/advanced/shelf-integration)
-- Configuration: [Driver Configuration](/api/drivers/configuration)
+<Steps>
+1. **Explore the API**: Learn about [configuration options](/api/overview) and available drivers
+2. **Add middleware**: Enhance your logs with [middleware](/advanced/middleware.md) for filtering and enrichment
+3. **Configure batching**: Optimize performance with [batching & shutdown](/advanced/batching-and-shutdown.md)
+4. **Integrate with frameworks**: Use [Shelf integration](/advanced/shelf-integration.md) for web applications
+</Steps>
+
+### Resources
+
+- 📚 [API Reference](/api/overview) - Complete API documentation
+- 🔧 [Driver Configuration](/api/drivers/configuration.md) - Configure output channels
+- 📁 [Daily File Driver](/api/drivers/daily-file.md) - File-based logging
+- 🔄 [Migration Guide](/migration/v2.md) - Upgrade from v1 to v2

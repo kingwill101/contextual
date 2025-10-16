@@ -1,7 +1,7 @@
 import 'package:contextual/contextual.dart';
 
 void main() async {
-  final config = TypedLogConfig(
+  final config = LogConfig(
     environment: 'development',
     batching: const BatchingConfig(enabled: true, batchSize: 50),
     channels: [
@@ -11,13 +11,13 @@ void main() async {
         name: 'file',
       ),
       WebhookChannel(
-         WebhookOptions(url: Uri.parse('https://example.com/hook')),
+        WebhookOptions(url: Uri.parse('https://example.com/hook')),
         name: 'web',
       ),
     ],
   );
 
-  final logger = await Logger.create(typedConfig: config);
+  final logger = await Logger.create(config: config);
 
   logger.info('hello world');
   logger.forDriver<ConsoleLogDriver>().debug('only console');

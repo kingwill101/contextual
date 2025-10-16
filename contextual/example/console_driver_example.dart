@@ -4,9 +4,7 @@ import 'package:contextual/contextual.dart';
 void main() async {
   final logger = await Logger.create(
     formatter: PrettyLogFormatter(),
-    typedConfig: const TypedLogConfig(
-      channels: [ConsoleChannel(ConsoleOptions())],
-    ),
+    config: const LogConfig(channels: [ConsoleChannel(ConsoleOptions())]),
   );
 
   try {
@@ -19,21 +17,26 @@ void main() async {
     logger.critical('Critical message in bold red - for critical failures');
 
     // Add context to show structured data with color-coded output
-    logger.withContext({
-      'requestId': '123abc',
-      'user': 'john_doe',
-      'action': 'login',
-    }).info('User action with context data');
+    logger
+        .withContext({
+          'requestId': '123abc',
+          'user': 'john_doe',
+          'action': 'login',
+        })
+        .info('User action with context data');
 
     // Example with error and stack trace
     try {
       throw Exception('Database connection failed');
     } catch (e, stack) {
-      logger.withContext({
-        'error': e.toString(),
-        'stackTrace':
-            stack.toString().split('\n')[0], // First line of stack trace
-      }).error('Error occurred during database operation');
+      logger
+          .withContext({
+            'error': e.toString(),
+            'stackTrace': stack.toString().split(
+              '\n',
+            )[0], // First line of stack trace
+          })
+          .error('Error occurred during database operation');
     }
   } finally {
     // While not strictly necessary for console-only logging,

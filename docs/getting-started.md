@@ -31,10 +31,10 @@ import 'package:contextual/contextual.dart';
 void main() async {
   // Create a logger with console output
   final logger = await Logger.create(
-  typedConfig: const TypedLogConfig(
-    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
-  ),
-);
+    config: const LogConfig(
+      channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    ),
+  );
 
   // Log some messages
   logger.info('Hello from Contextual!');
@@ -55,10 +55,11 @@ When using file-based drivers (like `DailyFileLogDriver`), it's crucial to prope
 
 ```dart
 final logger = await Logger.create(
-  typedConfig: const TypedLogConfig(
+  config: const LogConfig(
     channels: [DailyFileChannel(DailyFileOptions(path: 'logs/app'))],
   ),
 );
+```
 
 try {
   // Your application code
@@ -69,19 +70,20 @@ try {
 
 ### Typed Configuration
 
-You can also configure Contextual using typed configuration objects, which give you compile-time safety and autocompletion:
+Configure Contextual using typed configuration objects for compile-time safety and autocompletion:
 
 ```dart
-final config = TypedLogConfig(
+final config = LogConfig(
   level: 'debug',
   environment: 'development',
   channels: const [
     ConsoleChannel(ConsoleOptions(), name: 'console'),
     DailyFileChannel(DailyFileOptions(path: 'logs/app', retentionDays: 7), name: 'file'),
+    WebhookChannel(WebhookOptions(url: Uri.parse('https://hooks.slack.com/services/...')), name: 'slack'),
   ],
 );
 
-final logger = await Logger.create(typedConfig: config);
+final logger = await Logger.create(config: config);
 ```
 
 Note: Console-only logging setups don't require explicit shutdown, but it's still good practice to include it.
@@ -93,10 +95,15 @@ Note: Console-only logging setups don't require explicit shutdown, but it's stil
 Contextual supports multiple output channels, allowing you to send logs to different destinations:
 
 ```dart
-final logger = await Logger.create()
-  ..addChannel('console', ConsoleLogDriver())
-  ..addChannel('file', DailyFileLogDriver('logs/app.log'))
-  ..addChannel('webhook', WebhookLogDriver(Uri.parse('https://your-webhook.com')));
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(DailyFileOptions(path: 'logs/app'), name: 'file'),
+      WebhookChannel(WebhookOptions(url: Uri.parse('https://your-webhook.com')), name: 'webhook'),
+    ],
+  ),
+);
 ```
 
 ### Daily Rotating File Logs
@@ -104,15 +111,20 @@ final logger = await Logger.create()
 The `DailyFileLogDriver` automatically rotates log files daily and manages retention:
 
 ```dart
-final logger = await Logger.create()
-  ..addChannel(
-    'file',
-    DailyFileLogDriver(
-      'logs/app',
-      retentionDays: 30,
-      flushInterval: Duration(seconds: 1),
-    ),
-  );
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      DailyFileChannel(
+        DailyFileOptions(
+          path: 'logs/app',
+          retentionDays: 30,
+          flushInterval: const Duration(seconds: 1),
+        ),
+        name: 'file',
+      ),
+    ],
+  ),
+);
 ```
 
 ### Rich Context
@@ -171,8 +183,11 @@ Customize how your logs are formatted:
 
 ```dart
 final logger = await Logger.create(
-  formatter: JsonLogFormatter(), // or PrettyLogFormatter(), PlainTextLogFormatter()
-)..addChannel('console', ConsoleLogDriver());
+  config: LogConfig(
+    formatter: JsonLogFormatter(), // or PrettyLogFormatter(), PlainTextLogFormatter()
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+  ),
+);
 ```
 
 ### Log Levels
@@ -204,5 +219,5 @@ logger.addMiddleware(() => {
 ## Next Steps
 
 - Check out the [API Reference](api/overview) for detailed documentation
-- Learn about [Advanced Features](advanced/middleware)
-- Explore [Driver Guides](drivers/daily-file) for configuration examples
+- Learn about [Advanced Features](advanced/middleware.md)
+- Explore [Driver Guides](api/drivers/daily-file.md) for configuration examples

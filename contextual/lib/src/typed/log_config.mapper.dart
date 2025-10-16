@@ -7,14 +7,14 @@
 
 part of 'log_config.dart';
 
-class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
-  TypedLogConfigMapper._();
+class LogConfigMapper extends ClassMapperBase<LogConfig> {
+  LogConfigMapper._();
 
-  static TypedLogConfigMapper? _instance;
-  static TypedLogConfigMapper ensureInitialized() {
+  static LogConfigMapper? _instance;
+  static LogConfigMapper ensureInitialized() {
     if (_instance == null) {
-      MapperContainer.globals.use(_instance = TypedLogConfigMapper._());
-      FormatterSettingsTypedMapper.ensureInitialized();
+      MapperContainer.globals.use(_instance = LogConfigMapper._());
+      FormatterSettingsMapper.ensureInitialized();
       BatchingConfigMapper.ensureInitialized();
       ChannelConfigMapper.ensureInitialized();
     }
@@ -22,49 +22,48 @@ class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
   }
 
   @override
-  final String id = 'TypedLogConfig';
+  final String id = 'LogConfig';
 
-  static String? _$level(TypedLogConfig v) => v.level;
-  static const Field<TypedLogConfig, String> _f$level = Field(
+  static String? _$level(LogConfig v) => v.level;
+  static const Field<LogConfig, String> _f$level = Field(
     'level',
     _$level,
     opt: true,
   );
-  static String? _$formatter(TypedLogConfig v) => v.formatter;
-  static const Field<TypedLogConfig, String> _f$formatter = Field(
+  static String? _$formatter(LogConfig v) => v.formatter;
+  static const Field<LogConfig, String> _f$formatter = Field(
     'formatter',
     _$formatter,
     opt: true,
   );
-  static FormatterSettingsTyped? _$formatterSettings(TypedLogConfig v) =>
+  static FormatterSettings? _$formatterSettings(LogConfig v) =>
       v.formatterSettings;
-  static const Field<TypedLogConfig, FormatterSettingsTyped>
-  _f$formatterSettings = Field(
+  static const Field<LogConfig, FormatterSettings> _f$formatterSettings = Field(
     'formatterSettings',
     _$formatterSettings,
     opt: true,
   );
-  static String _$environment(TypedLogConfig v) => v.environment;
-  static const Field<TypedLogConfig, String> _f$environment = Field(
+  static String _$environment(LogConfig v) => v.environment;
+  static const Field<LogConfig, String> _f$environment = Field(
     'environment',
     _$environment,
     opt: true,
     def: 'production',
   );
-  static BatchingConfig? _$batching(TypedLogConfig v) => v.batching;
-  static const Field<TypedLogConfig, BatchingConfig> _f$batching = Field(
+  static BatchingConfig? _$batching(LogConfig v) => v.batching;
+  static const Field<LogConfig, BatchingConfig> _f$batching = Field(
     'batching',
     _$batching,
     opt: true,
   );
-  static Map<String, dynamic>? _$context(TypedLogConfig v) => v.context;
-  static const Field<TypedLogConfig, Map<String, dynamic>> _f$context = Field(
+  static Map<String, dynamic>? _$context(LogConfig v) => v.context;
+  static const Field<LogConfig, Map<String, dynamic>> _f$context = Field(
     'context',
     _$context,
     opt: true,
   );
-  static List<ChannelConfig> _$channels(TypedLogConfig v) => v.channels;
-  static const Field<TypedLogConfig, List<ChannelConfig>> _f$channels = Field(
+  static List<ChannelConfig> _$channels(LogConfig v) => v.channels;
+  static const Field<LogConfig, List<ChannelConfig>> _f$channels = Field(
     'channels',
     _$channels,
     opt: true,
@@ -72,7 +71,7 @@ class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
   );
 
   @override
-  final MappableFields<TypedLogConfig> fields = const {
+  final MappableFields<LogConfig> fields = const {
     #level: _f$level,
     #formatter: _f$formatter,
     #formatterSettings: _f$formatterSettings,
@@ -82,8 +81,8 @@ class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
     #channels: _f$channels,
   };
 
-  static TypedLogConfig _instantiate(DecodingData data) {
-    return TypedLogConfig(
+  static LogConfig _instantiate(DecodingData data) {
+    return LogConfig(
       level: data.dec(_f$level),
       formatter: data.dec(_f$formatter),
       formatterSettings: data.dec(_f$formatterSettings),
@@ -97,70 +96,63 @@ class TypedLogConfigMapper extends ClassMapperBase<TypedLogConfig> {
   @override
   final Function instantiate = _instantiate;
 
-  static TypedLogConfig fromMap(Map<String, dynamic> map) {
-    return ensureInitialized().decodeMap<TypedLogConfig>(map);
+  static LogConfig fromMap(Map<String, dynamic> map) {
+    return ensureInitialized().decodeMap<LogConfig>(map);
   }
 
-  static TypedLogConfig fromJson(String json) {
-    return ensureInitialized().decodeJson<TypedLogConfig>(json);
+  static LogConfig fromJson(String json) {
+    return ensureInitialized().decodeJson<LogConfig>(json);
   }
 }
 
-mixin TypedLogConfigMappable {
+mixin LogConfigMappable {
   String toJson() {
-    return TypedLogConfigMapper.ensureInitialized().encodeJson<TypedLogConfig>(
-      this as TypedLogConfig,
+    return LogConfigMapper.ensureInitialized().encodeJson<LogConfig>(
+      this as LogConfig,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return TypedLogConfigMapper.ensureInitialized().encodeMap<TypedLogConfig>(
-      this as TypedLogConfig,
+    return LogConfigMapper.ensureInitialized().encodeMap<LogConfig>(
+      this as LogConfig,
     );
   }
 
-  TypedLogConfigCopyWith<TypedLogConfig, TypedLogConfig, TypedLogConfig>
-  get copyWith => _TypedLogConfigCopyWithImpl<TypedLogConfig, TypedLogConfig>(
-    this as TypedLogConfig,
-    $identity,
-    $identity,
-  );
+  LogConfigCopyWith<LogConfig, LogConfig, LogConfig> get copyWith =>
+      _LogConfigCopyWithImpl<LogConfig, LogConfig>(
+        this as LogConfig,
+        $identity,
+        $identity,
+      );
   @override
   String toString() {
-    return TypedLogConfigMapper.ensureInitialized().stringifyValue(
-      this as TypedLogConfig,
+    return LogConfigMapper.ensureInitialized().stringifyValue(
+      this as LogConfig,
     );
   }
 
   @override
   bool operator ==(Object other) {
-    return TypedLogConfigMapper.ensureInitialized().equalsValue(
-      this as TypedLogConfig,
+    return LogConfigMapper.ensureInitialized().equalsValue(
+      this as LogConfig,
       other,
     );
   }
 
   @override
   int get hashCode {
-    return TypedLogConfigMapper.ensureInitialized().hashValue(
-      this as TypedLogConfig,
-    );
+    return LogConfigMapper.ensureInitialized().hashValue(this as LogConfig);
   }
 }
 
-extension TypedLogConfigValueCopy<$R, $Out>
-    on ObjectCopyWith<$R, TypedLogConfig, $Out> {
-  TypedLogConfigCopyWith<$R, TypedLogConfig, $Out> get $asTypedLogConfig =>
-      $base.as((v, t, t2) => _TypedLogConfigCopyWithImpl<$R, $Out>(v, t, t2));
+extension LogConfigValueCopy<$R, $Out> on ObjectCopyWith<$R, LogConfig, $Out> {
+  LogConfigCopyWith<$R, LogConfig, $Out> get $asLogConfig =>
+      $base.as((v, t, t2) => _LogConfigCopyWithImpl<$R, $Out>(v, t, t2));
 }
 
-abstract class TypedLogConfigCopyWith<$R, $In extends TypedLogConfig, $Out>
+abstract class LogConfigCopyWith<$R, $In extends LogConfig, $Out>
     implements ClassCopyWith<$R, $In, $Out> {
-  FormatterSettingsTypedCopyWith<
-    $R,
-    FormatterSettingsTyped,
-    FormatterSettingsTyped
-  >?
+  FormatterSettingsCopyWith<$R, FormatterSettings, FormatterSettings>?
   get formatterSettings;
   BatchingConfigCopyWith<$R, BatchingConfig, BatchingConfig>? get batching;
   MapCopyWith<$R, String, dynamic, ObjectCopyWith<$R, dynamic, dynamic>>?
@@ -174,31 +166,25 @@ abstract class TypedLogConfigCopyWith<$R, $In extends TypedLogConfig, $Out>
   $R call({
     String? level,
     String? formatter,
-    FormatterSettingsTyped? formatterSettings,
+    FormatterSettings? formatterSettings,
     String? environment,
     BatchingConfig? batching,
     Map<String, dynamic>? context,
     List<ChannelConfig>? channels,
   });
-  TypedLogConfigCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
-    Then<$Out2, $R2> t,
-  );
+  LogConfigCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
 }
 
-class _TypedLogConfigCopyWithImpl<$R, $Out>
-    extends ClassCopyWithBase<$R, TypedLogConfig, $Out>
-    implements TypedLogConfigCopyWith<$R, TypedLogConfig, $Out> {
-  _TypedLogConfigCopyWithImpl(super.value, super.then, super.then2);
+class _LogConfigCopyWithImpl<$R, $Out>
+    extends ClassCopyWithBase<$R, LogConfig, $Out>
+    implements LogConfigCopyWith<$R, LogConfig, $Out> {
+  _LogConfigCopyWithImpl(super.value, super.then, super.then2);
 
   @override
-  late final ClassMapperBase<TypedLogConfig> $mapper =
-      TypedLogConfigMapper.ensureInitialized();
+  late final ClassMapperBase<LogConfig> $mapper =
+      LogConfigMapper.ensureInitialized();
   @override
-  FormatterSettingsTypedCopyWith<
-    $R,
-    FormatterSettingsTyped,
-    FormatterSettingsTyped
-  >?
+  FormatterSettingsCopyWith<$R, FormatterSettings, FormatterSettings>?
   get formatterSettings => $value.formatterSettings?.copyWith.$chain(
     (v) => call(formatterSettings: v),
   );
@@ -246,7 +232,7 @@ class _TypedLogConfigCopyWithImpl<$R, $Out>
     }),
   );
   @override
-  TypedLogConfig $make(CopyWithData data) => TypedLogConfig(
+  LogConfig $make(CopyWithData data) => LogConfig(
     level: data.get(#level, or: $value.level),
     formatter: data.get(#formatter, or: $value.formatter),
     formatterSettings: data.get(
@@ -260,8 +246,8 @@ class _TypedLogConfigCopyWithImpl<$R, $Out>
   );
 
   @override
-  TypedLogConfigCopyWith<$R2, TypedLogConfig, $Out2> $chain<$R2, $Out2>(
+  LogConfigCopyWith<$R2, LogConfig, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
-  ) => _TypedLogConfigCopyWithImpl<$R2, $Out2>($value, $cast, t);
+  ) => _LogConfigCopyWithImpl<$R2, $Out2>($value, $cast, t);
 }
 

@@ -32,8 +32,10 @@ void main() {
     });
 
     test('should handle exceptions when ignoreExceptions is true', () async {
-      stackDriver =
-          StackLogDriver([testDriver1, testDriver2], ignoreExceptions: true);
+      stackDriver = StackLogDriver([
+        testDriver1,
+        testDriver2,
+      ], ignoreExceptions: true);
 
       // Create a LogRecord and LogEntry
       final record = LogRecord(
@@ -52,12 +54,14 @@ void main() {
 
   group('Typed driver selection and construction', () {
     test('Logger.forDriverType selects by type', () async {
-      final logger = await Logger.create(typedConfig: const TypedLogConfig(
-        channels: [
-          ConsoleChannel(ConsoleOptions(), name: 'consoleA'),
-          ConsoleChannel(ConsoleOptions(), name: 'consoleB'),
-        ],
-      ));
+      final logger = await Logger.create(
+        config: const LogConfig(
+          channels: [
+            ConsoleChannel(ConsoleOptions(), name: 'consoleA'),
+            ConsoleChannel(ConsoleOptions(), name: 'consoleB'),
+          ],
+        ),
+      );
 
       // Should select both console channels
       logger.forDriver<ConsoleLogDriver>().info('hello');

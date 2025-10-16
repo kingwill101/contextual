@@ -1,5 +1,8 @@
 [![pub package](https://img.shields.io/pub/v/contextual.svg)](https://pub.dev/packages/contextual)
-[![Build Status](https://github.com/kingwill101/contextual/workflows/dart/badge.svg)](https://github.com/kingwill101/contextual/actions)
+[![Dart](https://img.shields.io/badge/dart-%3E%3D3.9.0-blue.svg)](https://dart.dev/)
+[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+[![Build Status](https://github.com/kingwill101/contextual/workflows/Dart/badge.svg)](https://github.com/kingwill101/contextual/actions)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://www.buymeacoffee.com/kingwill101)
 
 # Contextual
 
@@ -61,7 +64,7 @@ Load configuration from JSON:
 
 
 ```dart
-final config = TypedLogConfig(
+final config = LogConfig(
   level: 'debug',
   environment: 'development',
   channels: const [
@@ -71,14 +74,14 @@ final config = TypedLogConfig(
   ],
 );
 
-final logger = await Logger.create(typedConfig: config);
+final logger = await Logger.create(config: config);
 
 ```
 
 If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` formatter. To disable the the `default` console logger, at initialization, set the `defaultChannelEnabled` value to `false` in the constructor of your `Logger` instance.
 
 ```dart
-final logger = await Logger.create(typedConfig: const TypedLogConfig(
+final logger = await Logger.create(config: const LogConfig(
   channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
 ),
 );
@@ -255,7 +258,7 @@ logger.formatter(JsonLogFormatter());    // JSON format
 logger.formatter(RawLogFormatter());     // No formatting
 
 // Set formatter per channel in configuration
-final config = TypedLogConfig(
+final config = LogConfig(
   channels: const [
     ConsoleChannel(ConsoleOptions(), name: 'console'),
     DailyFileChannel(DailyFileOptions(path: 'logs/app', retentionDays: 7), name: 'file'),
@@ -421,35 +424,19 @@ Channels are named logging destinations that can be configured independently. Ea
 ```dart
 // Configure multiple channels with per-channel formatters
 final logger = await Logger.create(
-  typedConfig: const TypedLogConfig(
+  config: LogConfig(
     channels: [
-        // Console output for development with pretty formatting
-        'console': {
-          'driver': 'console',
-          'env': 'development',
-          'formatter': 'pretty'
-        },
-        // Daily rotating file for production logs with JSON formatting
-        'daily': {
-          'driver': 'daily',
-          'config': {
-            'path': 'logs/app.log',
-            'days': 7,
-          }
-          'env': 'production',
-          'formatter': 'json'
-        },
-        // Slack notifications for critical issues with plain text formatting
-        'slack': {
-          'driver': 'webhook',
-          'config': {
-            'url': 'https://hooks.slack.com/...',
-          },
-          'env': 'production',
-          'formatter': 'plain'
-        }
-      }
-    })
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(
+        DailyFileOptions(path: 'logs/app.log', retentionDays: 7),
+        name: 'daily',
+      ),
+      WebhookChannel(
+        WebhookOptions(url: Uri.parse('https://hooks.slack.com/...')),
+        name: 'slack',
+      ),
+    ],
+  ),
 );
 // Log to specific channels
 logger['console'].info('Regular log message');
@@ -520,7 +507,7 @@ Below are the configuration options for each available driver:
 ### Example Configuration
 
 ```dart
-final config = TypedLogConfig(
+final config = LogConfig(
    'channels': {
       'console': {
          'driver': 'console',
@@ -529,9 +516,12 @@ final config = TypedLogConfig(
          'driver': 'daily',
          'config': {
             'path': 'logs/app.log',
-            'days': 7,
+            'days': 30,
          },
       },
+   },
+);
+final logger = await Logger.create(config: config);
       'webhook': {
          'driver': 'webhook',
          'config': {
@@ -566,7 +556,7 @@ Stack channels allow you to create a single channel that forwards logs to multip
 
 ```dart
 
-final config = TypedLogConfig(
+final config = LogConfig(
   'channels': {
     // Individual channels with their own formatters
     'file': {
@@ -579,10 +569,12 @@ final config = TypedLogConfig(
     'slack': {
       'driver': 'webhook',
       'config': {
-        'url': 'https://hooks.slack.com/...',
+        'url': 'https://hooks.slack.com/services/...',
       }
-      'formatter': 'plain'
     },
+  },
+);
+final logger = await Logger.create(config: config);
 
     // Stack channel that combines both
     'production': {

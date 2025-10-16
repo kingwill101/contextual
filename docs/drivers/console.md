@@ -1,0 +1,198 @@
+# Console Driver
+
+The Console driver writes log messages to standard output. It’s a zero‑config, low‑latency destination that pairs well with human‑readable formatters for development and with JSON for production/containerized environments.
+
+## Features
+
+- Instant, low-overhead output to stdout
+- Works with any formatter (Pretty, Plain, JSON)
+- Great for local development and container logs
+- Plays nicely with middleware enrichment and sampling
+- Can be combined via the Stack driver with other outputs
+
+---
+
+## Usage
+
+### Typed configuration (recommended)
+
+Use the typed `ConsoleChannel` with `ConsoleOptions` for compile‑time safety and clarity:
+
+~~~dart
+import 'package:contextual/contextual.dart';
+
+void main() async {
+  final logger = await Logger.create(
+    config: LogConfig(
+      channels: const [
+        ConsoleChannel(
+          ConsoleOptions(),
+          name: 'console',
+        ),
+      ],
+    ),
+  );
+
+  logger.info('Hello from Contextual (console)!');
+}
+~~~
+
+- Name your channel (e.g. `console`) so you can target it later.
+- You can also provide a channel-specific `formatter` (see Formatting below).
+
+### Direct driver (imperative API)
+
+You can also wire the driver directly:
+
+~~~dart
+import 'package:contextual/contextual.dart';
+
+void main() async {
+  final logger = await Logger.create();
+
+  // Add a console channel using the raw driver
+  logger.addChannel('console', ConsoleLogDriver());
+
+  logger.info('Logging to console via raw driver');
+
+  // Optionally remove, replace, or re-add channels at runtime
+  logger
+    ..removeChannel('console')
+    ..addChannel('console', ConsoleLogDriver());
+}
+~~~
+
+### Targeting the console channel
+
+- By name:
+  ~~~dart
+  logger['console'].info('Only goes to the console channel');
+  ~~~
+
+- By driver type:
+  ~~~dart
+  logger.forDriver<ConsoleLogDriver>().info('All console drivers');
+  ~~~
+
+---
+
+## Formatting
+
+Console output is only as useful as its formatting. Pair the Console driver with the formatter that fits your use case:
+
+- PrettyLogFormatter: Human-friendly, colorized output for development
+- PlainTextLogFormatter: Minimal, fast text output
+- JsonLogFormatter: Structured logs ideal for ingestion and search
+
+### Global (logger-wide) formatter
+
+~~~dart
+final logger = await Logger.create(
+  config: LogConfig(
+    formatter: PrettyLogFormatter(),
+    channels: const [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+    ],
+  ),
+);
+~~~
+
+### Per-channel formatter (typed config)
+
+~~~dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: const [
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console',
+        formatter: PrettyLogFormatter(),
+      ),
+    ],
+  ),
+);
+~~~
+
+### Per-channel formatter (imperative)
+
+~~~dart
+final logger = await Logger.create();
+
+logger.addChannel(
+  'console',
+  ConsoleLogDriver(),
+  formatter: JsonLogFormatter(),
+);
+~~~
+
+Tip: Use PrettyLogFormatter locally, and JsonLogFormatter in production for structured log pipelines.
+
+---
+
+## Best Practices
+
+- Use PrettyLogFormatter in development for readability; switch to JsonLogFormatter in production for machine parsing.
+- Enrich logs with middleware (request IDs, user IDs, version, env) for better debugging.
+- Keep console noise in check; use levels appropriately and consider Sampling/Stack drivers for high-volume scenarios.
+- If you need durability or retention, pair Console with the Daily File driver using the Stack driver.
+- Prefer typed channels in application configuration for clarity and safety; use imperative APIs for dynamic runtime wiring or testing.
+
+---
+
+## Examples
+
+### With middleware enrichment
+
+~~~dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: const [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+    ],
+    middlewares: [
+      () => {
+        'env': 'production',
+        'version': '2.0.0',
+        'ts': DateTime.now().toIso8601String(),
+      },
+    ],
+  ),
+);
+
+logger.info('Application started');
+~~~
+
+### Stacking Console with File output
+
+~~~dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: const [
+      StackChannel(
+        StackOptions(
+          channels: ['console', 'file'], // references other channel names
+          ignoreExceptions: true,
+        ),
+        name: 'stack',
+      ),
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(
+        DailyFileOptions(path: 'logs/app', retentionDays: 14),
+        name: 'file',
+      ),
+    ],
+  ),
+);
+~~~
+
+---
+
+## See also
+
+- API Overview: /api/overview
+- Driver Configuration: /api/drivers/configuration.md
+- Daily File Driver (guide): /drivers/daily-file.md
+- Daily File Driver (API): /api/drivers/daily-file.md
+- Middleware (advanced): /advanced/middleware.md
+- Batching & Shutdown (advanced): /advanced/batching-and-shutdown.md
+- Shelf Integration: /advanced/shelf-integration.md

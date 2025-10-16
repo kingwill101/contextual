@@ -6,16 +6,16 @@ import 'channel_config.dart';
 part 'log_config.mapper.dart';
 
 @MappableClass()
-class TypedLogConfig with TypedLogConfigMappable {
+class LogConfig with LogConfigMappable {
   final String? level; // minimum level by name
   final String? formatter; // default formatter by name
-  final FormatterSettingsTyped? formatterSettings;
+  final FormatterSettings? formatterSettings;
   final String environment;
   final BatchingConfig? batching;
   final Map<String, dynamic>? context;
   final List<ChannelConfig> channels;
 
-  const TypedLogConfig({
+  const LogConfig({
     this.level,
     this.formatter,
     this.formatterSettings,

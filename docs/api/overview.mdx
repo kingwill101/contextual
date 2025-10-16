@@ -11,41 +11,50 @@ The main class for logging operations. It manages log channels, formatting, and 
 
 ```dart
 final logger = await Logger.create(
-  environment: 'production',
-  formatter: JsonLogFormatter(),
+  config: LogConfig(
+    environment: 'production',
+    formatter: JsonLogFormatter(),
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+  ),
 );
 ```
 
 Key methods:
 - `log(Level level, dynamic message, [Context? context])`: Core logging method
-- `addChannel(String name, LogDriver driver)`: Add output channel
-- `addMiddleware(ContextMiddleware middleware)`: Add context middleware
+- `forDriver<T extends LogDriver>([String? name])`: Target specific driver types
+- `addMiddleware(Middleware middleware)`: Add global middleware
 - `withContext(Map<String, dynamic> context)`: Add shared context
 - `setLevel(Level level)`: Set minimum log level
 
 
 #### Runtime Channels
 
-Each channel is represented at runtime by a `Channel<T extends LogDriver>` object that bundles:
+Each channel is represented at runtime by a typed channel object that bundles:
 - the channel `name`
-- the `driver` instance
+- the driver options
 - an optional `formatter`
 - optional `middlewares` (applied after global middleware)
 
 ```dart
-// Add a channel and then adjust it with copyWith
-logger.addChannel('console', ConsoleLogDriver(), formatter: PrettyLogFormatter());
+// Channels are configured via LogConfig
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console',
+        formatter: PrettyLogFormatter(),
+      ),
+    ],
+  ),
+);
 
-final ch = logger.getChannel('console');
-if (ch != null) {
-  // Example showing how a Channel can be adjusted; normally you'd just re-add
-  final updated = ch.copyWith(formatter: JsonLogFormatter());
-  // Re-register the updated channel
-  logger.addChannel(updated.name, updated.driver, formatter: updated.formatter, middlewares: updated.middlewares);
-}
+// Access channels by name or type
+final consoleChannel = logger['console'];
+final consoleLogger = logger.forDriver<ConsoleLogDriver>();
 ```
 
-You can also target drivers by type:
+You can target drivers by type:
 
 ```dart
 logger.forDriver<ConsoleLogDriver>().info('Only console drivers');
@@ -74,6 +83,17 @@ class CustomLogDriver extends LogDriver {
     // Custom log handling
   }
 }
+```
+
+Drivers are now constructed via typed options:
+```dart
+// Old way (deprecated)
+final driver = DailyFileLogDriver('logs/app.log');
+
+// New way
+final driver = DailyFileLogDriver.fromOptions(
+  DailyFileOptions(path: 'logs/app.log'),
+);
 ```
 
 ### Context
@@ -129,34 +149,65 @@ class CustomFormatter extends LogMessageFormatter {
 }
 ```
 
+Formatters can be configured per channel:
+```dart
+// Channels are configured via LogConfig
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console',
+        formatter: PrettyLogFormatter(),
+      ),
+      DailyFileChannel(
+        DailyFileOptions(path: 'logs/app'),
+        name: 'file',
+        formatter: JsonLogFormatter(),
+      ),
+    ],
+  ),
+);
+```
+
 ## Advanced Features
 
-### Log Queue
+### Batching
 
-Batches log messages for efficient processing:
+Batches log messages for efficient processing via `BatchingConfig`:
 
 ```dart
-final queue = LogQueue(
-  config: LogQueueConfig(
-    flushInterval: Duration(milliseconds: 500),
+final logger = await Logger.create(
+  config: LogConfig(
+    batching: BatchingConfig(
+      enabled: true,
+      batchSize: 100,
+      flushInterval: Duration(milliseconds: 500),
+    ),
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
   ),
-  processor: (entries) async {
-    // Process batch of entries
-  },
 );
 ```
 
 ### Middleware
 
-Transform or enrich log entries:
+Transform or enrich log entries with a single pipeline:
 
 ```dart
-logger.addMiddleware(() => {
-  'timestamp': DateTime.now().toIso8601String(),
-  'process_id': Platform.pid,
-});
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [
+      () => {
+        'timestamp': DateTime.now().toIso8601String(),
+        'process_id': Platform.pid,
+      },
+    ],
+  ),
+);
 
-logger.addLogMiddleware(SensitiveDataFilter());
+// Driver-specific middleware
+logger.addDriverMiddleware<ConsoleLogDriver>(SensitiveDataFilter());
 ```
 
 ### Type Formatters
@@ -167,15 +218,24 @@ Custom formatting for specific types:
 logger.addTypeFormatter<Error>(ErrorLogFormatter());
 ```
 
+Type formatters work with the new serialization system.
+
 ## Configuration
 
-### TypedLogConfig
+### LogConfig
 
-Configure channels through code or configuration:
+Configure channels through typed objects:
 
 ```dart
-final config = TypedLogConfig(
+final config = LogConfig(
   environment: 'production',
+  level: 'info',
+  formatter: JsonLogFormatter(),
+  batching: BatchingConfig(
+    enabled: true,
+    batchSize: 50,
+    flushInterval: Duration(seconds: 1),
+  ),
   channels: const [
     DailyFileChannel(
       DailyFileOptions(path: 'logs/app', retentionDays: 30),
@@ -187,20 +247,11 @@ final config = TypedLogConfig(
     ),
   ],
 );
+
+final logger = await Logger.create(config: config);
 ```
 
-### LogSinkConfig
-
-Configure log batching and processing:
-
-```dart
-final sinkConfig = LogSinkConfig(
-  batchSize: 50,
-  flushInterval: Duration(seconds: 1),
-  maxRetries: 3,
-  autoFlush: true,
-);
-```
+Typed configs support JSON serialization for configuration files.
 
 ## Best Practices
 
@@ -215,13 +266,32 @@ final sinkConfig = LogSinkConfig(
 
 2. **Set Appropriate Log Levels**
    ```dart
-   logger.setLevel(Level.warning); // Only log warning and above in production
+   final logger = await Logger.create(
+     config: LogConfig(
+       level: 'warning', // Only log warning and above in production
+       channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+     ),
+   );
    ```
 
 3. **Use Channel-Specific Formatters**
    ```dart
-   logger.addChannel('file', fileDriver, formatter: JsonLogFormatter());
-   logger.addChannel('console', consoleDriver, formatter: PrettyLogFormatter());
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [
+         DailyFileChannel(
+           DailyFileOptions(path: 'logs/app'),
+           name: 'file',
+           formatter: JsonLogFormatter(),
+         ),
+         ConsoleChannel(
+           ConsoleOptions(),
+           name: 'console',
+           formatter: PrettyLogFormatter(),
+         ),
+       ],
+     ),
+   );
    ```
 
 4. **Clean Up Resources**
@@ -231,8 +301,8 @@ final sinkConfig = LogSinkConfig(
 
 ## Next Steps
 
-- [Daily File Driver](../drivers/daily-file)
-- [Middleware Guide](../advanced/middleware) 
+- [Daily File Driver](../drivers/daily-file.md)
+- [Middleware Guide](../advanced/middleware.md)
 
 
 
@@ -240,4 +310,4 @@ final sinkConfig = LogSinkConfig(
 
 
 
-- [Migration to v2](../migration/v2)
+- [Migration to v2](../migration/v2.md)

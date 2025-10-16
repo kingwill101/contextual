@@ -15,15 +15,20 @@ The `DailyFileLogDriver` is a powerful logging driver that writes log messages t
 ## Basic Usage
 
 ```dart
-final logger = await Logger.create()
-  ..addChannel(
-    'file',
-    DailyFileLogDriver(
-      'logs/app',
-      retentionDays: 30,
-      flushInterval: Duration(seconds: 1),
-    ),
-  );
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      DailyFileChannel(
+        DailyFileOptions(
+          path: 'logs/app',
+          retentionDays: 30,
+          flushInterval: const Duration(seconds: 1),
+        ),
+        name: 'file',
+      ),
+    ],
+  ),
+);
 
 // Logs will be written to files like:
 // - logs/app-2024-02-15.log
@@ -36,26 +41,31 @@ final logger = await Logger.create()
 ### Standard Implementation
 
 ```dart
-final driver = DailyFileLogDriver(
-  'logs/app',
-  retentionDays: 30, // Default: 14 days
-  flushInterval: Duration(seconds: 1), // Default: 500ms
+final driver = DailyFileLogDriver.fromOptions(
+  DailyFileOptions(
+    path: 'logs/app',
+    retentionDays: 30, // Default: 14 days
+    flushInterval: const Duration(milliseconds: 500), // Default: 500ms
+  ),
 );
 ```
 
 ### Isolate-Optimized Implementation
 
 ```dart
-final driver = DailyFileLogDriver.withIsolateOptimization(
-  'logs/app',
-  retentionDays: 30,
-  flushInterval: Duration(seconds: 1),
+final driver = DailyFileLogDriver.fromOptions(
+  DailyFileOptions(
+    path: 'logs/app',
+    retentionDays: 30,
+    flushInterval: const Duration(seconds: 1),
+  ),
+  isolateOptimized: true,
 );
 ```
 
 ## Parameters
 
-- `baseFilePath`: Base path for log files (required)
+- `path`: Base path for log files (required)
   - Example: `'logs/app'` will create files like `logs/app-2024-02-15.log`
   - Directories will be created automatically if they don't exist
 
@@ -82,10 +92,10 @@ Files are automatically rotated at midnight (local time). The driver:
 
 ```dart
 // At 23:59:59 writing to: logs/app-2024-02-14.log
-logger.info('Last message of the day');
+logger.forDriver<DailyFileLogDriver>().info('Last message of the day');
 
 // At 00:00:00 automatically switches to: logs/app-2024-02-15.log
-logger.info('First message of the new day');
+logger.forDriver<DailyFileLogDriver>().info('First message of the new day');
 ```
 
 ### File Cleanup
@@ -117,22 +127,27 @@ final driver = DailyFileLogDriver(
 
 The driver comes in two variants:
 
-1. **Standard Implementation** (`DailyFileLogDriver`)
+1. **Standard Implementation** (`DailyFileLogDriver.fromOptions`)
    - Uses direct file writes
    - Good for most use cases
    - Simpler implementation
    - Example:
      ```dart
-     final driver = DailyFileLogDriver('logs/app');
+     final driver = DailyFileLogDriver.fromOptions(
+       DailyFileOptions(path: 'logs/app'),
+     );
      ```
 
-2. **Isolate-Optimized** (`DailyFileLogDriver.withIsolateOptimization`)
+2. **Isolate-Optimized** (`DailyFileLogDriver.fromOptions` with `isolateOptimized: true`)
    - Uses `IOSink` for buffered writing
    - Better performance for high-volume logging
    - More efficient memory usage
    - Example:
      ```dart
-     final driver = DailyFileLogDriver.withIsolateOptimization('logs/app');
+     final driver = DailyFileLogDriver.fromOptions(
+       DailyFileOptions(path: 'logs/app'),
+       isolateOptimized: true,
+     );
      ```
 
 ### Message Batching
@@ -140,16 +155,20 @@ The driver comes in two variants:
 Both implementations use message batching through the `LogQueue`:
 
 ```dart
-final driver = DailyFileLogDriver(
-  'logs/app',
-  flushInterval: Duration(milliseconds: 100), // More frequent writes
+final driver = DailyFileLogDriver.fromOptions(
+  DailyFileOptions(
+    path: 'logs/app',
+    flushInterval: const Duration(milliseconds: 100), // More frequent writes
+  ),
 );
 
 // vs
 
-final driver = DailyFileLogDriver(
-  'logs/app',
-  flushInterval: Duration(seconds: 2), // More batching, fewer writes
+final driver = DailyFileLogDriver.fromOptions(
+  DailyFileOptions(
+    path: 'logs/app',
+    flushInterval: const Duration(seconds: 2), // More batching, fewer writes
+  ),
 );
 ```
 
@@ -165,15 +184,21 @@ The driver handles various error conditions gracefully:
 Example with error handling:
 
 ```dart
-final logger = await Logger.create()
-  ..addChannel(
-    'file',
-    DailyFileLogDriver('logs/app'),
-  )
-  ..addChannel(
-    'console',
-    ConsoleLogDriver(), // Fallback for logging errors
-  );
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      DailyFileChannel(
+        DailyFileOptions(path: 'logs/app'),
+        name: 'file',
+      ),
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console', // Fallback for logging errors
+      ),
+    ],
+  ),
+);
+```
 
 try {
   // Your application code
@@ -189,8 +214,17 @@ try {
 Always properly shut down the logger to ensure all messages are written and resources are cleaned up:
 
 ```dart
-final logger = await Logger.create()
-  ..addChannel('file', DailyFileLogDriver('logs/app'));
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      DailyFileChannel(
+        DailyFileOptions(path: 'logs/app'),
+        name: 'file',
+      ),
+    ],
+  ),
+);
+```
 
 // ... use logger ...
 
@@ -203,63 +237,83 @@ await logger.shutdown();
 1. **Use Appropriate Flush Intervals**
    ```dart
    // Development: More frequent flushes for immediate feedback
-   final devDriver = DailyFileLogDriver(
-     'logs/app',
-     flushInterval: Duration(milliseconds: 100),
+   final devDriver = DailyFileLogDriver.fromOptions(
+     DailyFileOptions(
+       path: 'logs/app',
+       flushInterval: const Duration(milliseconds: 100),
+     ),
    );
 
    // Production: Longer intervals for better performance
-   final prodDriver = DailyFileLogDriver(
-     'logs/app',
-     flushInterval: Duration(seconds: 2),
+   final prodDriver = DailyFileLogDriver.fromOptions(
+     DailyFileOptions(
+       path: 'logs/app',
+       flushInterval: const Duration(seconds: 2),
+     ),
    );
    ```
 
 2. **Set Reasonable Retention Periods**
    ```dart
    // High-volume logs: Shorter retention
-   final highVolumeDriver = DailyFileLogDriver(
-     'logs/audit',
-     retentionDays: 7,
+   final highVolumeDriver = DailyFileLogDriver.fromOptions(
+     DailyFileOptions(
+       path: 'logs/audit',
+       retentionDays: 7,
+     ),
    );
 
    // Important logs: Longer retention
-   final auditDriver = DailyFileLogDriver(
-     'logs/audit',
-     retentionDays: 90,
+   final auditDriver = DailyFileLogDriver.fromOptions(
+     DailyFileOptions(
+       path: 'logs/audit',
+       retentionDays: 90,
+     ),
    );
    ```
 
 3. **Use with Other Drivers**
    ```dart
-   final logger = await Logger.create()
-     ..addChannel(
-       'file',
-       DailyFileLogDriver('logs/app'),
-     )
-     ..addChannel(
-       'console',
-       ConsoleLogDriver(),
-     )
-     ..addChannel(
-       'webhook',
-       WebhookLogDriver(Uri.parse('https://logs.example.com')),
-     );
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [
+         DailyFileChannel(
+           DailyFileOptions(path: 'logs/app'),
+           name: 'file',
+         ),
+         ConsoleChannel(
+           ConsoleOptions(),
+           name: 'console',
+         ),
+         WebhookChannel(
+           WebhookOptions(url: Uri.parse('https://logs.example.com')),
+           name: 'webhook',
+         ),
+       ],
+     ),
+   );
    ```
 
 4. **Monitor Disk Usage**
    ```dart
-   logger.addMiddleware(() {
-     final logDir = Directory('logs');
-     final usage = logDir.statSync().size;
-     if (usage > 1024 * 1024 * 1024) { // 1GB
-       print('Warning: High log directory usage');
-     }
-     return {};
-   });
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+       middlewares: [
+         () {
+           final logDir = Directory('logs');
+           final usage = logDir.statSync().size;
+           if (usage > 1024 * 1024 * 1024) { // 1GB
+             print('Warning: High log directory usage');
+           }
+           return {};
+         },
+       ],
+     ),
+   );
    ```
 
 ## Next Steps
 
-- [Driver Configuration](configuration)
-- [Middleware Guide](../../advanced/middleware) 
+- [Driver Configuration](configuration.md)
+- [Middleware Guide](../../advanced/middleware.md)

@@ -10,8 +10,11 @@ import 'package:contextual_shelf/contextual_shelf.dart';
 import 'package:shelf/shelf.dart';
 
 void main() async {
-  final logger = await Logger.create()
-    ..addChannel('console', ConsoleLogDriver());
+  final logger = await Logger.create(
+    config: LogConfig(
+      channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    ),
+  );
 
   final httpLogger = HttpLogger(DefaultLogProfile(), DefaultLogWriter());
 
@@ -25,6 +28,6 @@ void main() async {
 
 ## Tips
 
-- Consider a typed channel dedicated to HTTP logging (e.g., name: 'http'), and select it via `logger.forDriver<ConsoleLogDriver>(name: 'http')` if needed.
-- Combine with batching for high-throughput endpoints.
+- Consider a dedicated channel for HTTP logging (e.g., name: 'http'), and select it via `logger.forDriver<ConsoleLogDriver>(name: 'http')` if needed.
+- Combine with batching via `LogConfig.batching` for high-throughput endpoints.
 - Add driver middleware to redact sensitive headers or query parameters.

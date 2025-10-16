@@ -54,15 +54,15 @@ Goal: Replace map-shaped configs with strongly-typed classes and builders using 
 
 Goal: Create loggers directly from typed config; remove string driver keys and legacy map parsing.
 
-- [x] `Logger.create({typedConfig: TypedLogConfig})` builds channels from typed config
+- [x] `Logger.create({config: LogConfig})` builds channels from typed config
 - [x] DailyFileLogDriver.fromOptions(DailyFileOptions)
 - [x] WebhookLogDriver.fromOptions(WebhookOptions)
-- [x] Enable batching via `typedConfig.batching` automatically (`enableDriverBatching`)
+- [x] Enable batching via `config.batching` automatically (`enableDriverBatching`)
 - [x] Fluent ergonomics: `logger['name']`, `logger.forDriver<T>()`, `logger.batched()`
 - [x] Type registry for O(1) type-based selection
 - [x] Remove legacy map-based LogConfig and string driver factory paths
 - [ ] Acceptance criteria
-  - [x] Pure Dart-constructed `TypedLogConfig` initializes logger
+  - [x] Pure Dart-constructed `LogConfig` initializes logger
   - [x] Type-based selectors work across multiple channels of the same type
   - [x] Tests pass with new API in place
   - [ ] Legacy config fully removed (Phase 8)

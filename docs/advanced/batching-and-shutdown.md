@@ -4,30 +4,39 @@ Contextual provides optional batching to improve throughput for high-volume logg
 
 ## Defaults
 
-- Batching is opt-in. By default, drivers log synchronously.
-- When batching is enabled, logs are queued to a central LogSink and flushed on a fixed interval and/or batch size.
+- Batching is opt-in via `LogConfig.batching`. By default, drivers log synchronously.
+- When batching is enabled, logs are queued to a central sink and flushed on a fixed interval and/or batch size.
 - The sink automatically drains on process exit; explicit shutdown() is recommended for CLI/short-lived tasks.
 
-## Enabling batching
+## Enabling Batching
+
+Configure batching through `LogConfig`:
 
 ```dart
-final logger = await Logger.create();
-await logger.batched(); // enable with defaults
-
-// or customize via LogSinkConfig
-await logger.batched(LogSinkConfig(
-  batchSize: 50,
-  flushInterval: const Duration(milliseconds: 500),
-));
+final logger = await Logger.create(
+  config: LogConfig(
+    batching: BatchingConfig(
+      enabled: true,
+      batchSize: 50,
+      flushInterval: const Duration(milliseconds: 500),
+    ),
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+  ),
+);
 ```
 
-Disable batching:
+Disable batching by omitting or setting `enabled: false`:
 
 ```dart
-await logger.unbatched();
+final logger = await Logger.create(
+  config: LogConfig(
+    batching: BatchingConfig(enabled: false),
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+  ),
+);
 ```
 
-## Shutdown guidance
+## Shutdown Guidance
 
 - Long-running servers (Shelf, Flutter, etc.): shutdown() is optional; use it when you perform coordinated shutdown for other resources.
 - Short-lived scripts/CLIs: call await logger.shutdown() to ensure buffers are flushed.
@@ -37,22 +46,29 @@ await logger.info('Finishing up...');
 await logger.shutdown();
 ```
 
-## Driver lifecycle
+## Driver Lifecycle
 
 Drivers may allocate resources (e.g. file handles, HTTP clients). Logger.shutdown() notifies drivers to close resources, then waits for completion before closing the sink.
 
-## Batching ergonomics (quickstart)
+## Batching Best Practices
 
-- Default is unbatched, synchronous driver dispatch for simplicity.
-- Prefer `await logger.batched()` in high-throughput apps; it generally does not require explicit shutdown in typical server apps.
+- Default is unbatched for simplicity.
+- Enable batching in high-throughput apps via `LogConfig.batching`; it generally does not require explicit shutdown in typical server apps.
 - For short-lived CLIs or when using file drivers, call `await logger.shutdown()` to guarantee flush.
 
-
-## Example: Batched + type-targeted logging
+## Example: Batched Logging with Type-Targeting
 
 ```dart
-final logger = await Logger.create();
-await logger.batched(LogSinkConfig(batchSize: 100));
+final logger = await Logger.create(
+  config: LogConfig(
+    batching: BatchingConfig(
+      enabled: true,
+      batchSize: 100,
+      flushInterval: const Duration(milliseconds: 500),
+    ),
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+  ),
+);
 
-logger.forDriver<ConsoleLogDriver>().info('fast path');
+logger.forDriver<ConsoleLogDriver>().info('Fast batched logging');
 ```

@@ -1,3 +1,11 @@
+[![pub package](https://img.shields.io/pub/v/contextual_shelf.svg?label=contextual_shelf)](https://pub.dev/packages/contextual_shelf)
+[![Dart](https://img.shields.io/badge/dart-%3E%3D3.6.0-blue.svg)](https://dart.dev/)
+[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+[![Build Status](https://github.com/kingwill101/contextual/workflows/Dart/badge.svg)](https://github.com/kingwill101/contextual/actions)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://www.buymeacoffee.com/kingwill101)
+
+If this package helps you, consider supporting development: https://www.buymeacoffee.com/kingwill101
+
 # Contextual Shelf
 
 A powerful logging middleware for [Shelf](https://pub.dev/packages/shelf) applications that provides structured, configurable logging through integration with the [contextual](https://pub.dev/packages/contextual) logging package.

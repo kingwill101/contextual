@@ -2,46 +2,83 @@
 
 Middleware allows transforming or filtering log entries before they reach a driver.
 
-## Global vs Driver Middleware
+## Single Middleware Pipeline
 
-- Global middleware runs for every log entry and every driver.
-- Driver middleware runs only for a specific driver type.
+Contextual v2 uses a single middleware pipeline applied once per log entry, with a well-defined order: global → channel → driver-type.
+
+This ensures consistent processing and avoids duplication.
+
+## Global Middleware
+
+Global middleware runs for every log entry across all channels.
 
 ```dart
-// Global
-logger.addMiddleware(AddTimestamp());
-
-// Driver-specific
-logger.addDriverMiddleware<ConsoleLogDriver>(SensitiveDataFilter()); // generic, no driver name required
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [
+      () => {'timestamp': DateTime.now().toIso8601String()},
+    ],
+  ),
+);
 ```
 
-## Writing Driver Middleware
+## Channel Middleware
+
+Channel middleware applies to specific channels.
 
 ```dart
-class SensitiveDataFilter implements DriverMiddleware {
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console',
+        middlewares: [SensitiveDataFilter()],
+      ),
+    ],
+  ),
+);
+```
+
+## Driver-Type Middleware
+
+Driver-type middleware applies to all channels of a specific driver type.
+
+```dart
+logger.addDriverMiddleware<ConsoleLogDriver>(RateLimitMiddleware());
+```
+
+## Writing Middleware
+
+Implement [Middleware] for global or channel middleware, or [DriverMiddleware] for driver-specific.
+
+```dart
+class SensitiveDataFilter implements Middleware {
   @override
-  DriverMiddlewareResult handle(LogEntry entry) {
+  LogEntry handle(LogEntry entry) {
     final masked = entry.copyWith(message: _mask(entry.message));
-    return DriverMiddlewareResult.modify(masked);
+    return masked;
   }
 }
 ```
 
 ## Ordering
 
-- Global middleware executes first (in order of addition).
-- Driver middleware executes after global middleware (in order of addition).
+Middleware executes in this order:
+1. Global middleware (in order of addition)
+2. Channel middleware (in order of addition)
+3. Driver-type middleware (in order of addition)
 
 ## Error Handling
 
-If a middleware throws, the error is caught and logged as an internal warning, and processing continues unless a driver chooses to halt.
+If middleware throws, the error is logged internally, and processing continues.
 
 ## Tips
 
-- Prefer type-based registration: `addDriverMiddleware<ConsoleLogDriver>(...)`.
-- Keep middleware side-effect free where possible.
-- Use `DriverMiddlewareResult.stop()` to halt processing for a specific entry.
-
+- Prefer type-based registration for driver middleware.
+- Keep middleware side-effect free.
+- Use [MiddlewareResult.stop] to halt processing.
 
 Middleware in Contextual provides a powerful way to transform, enrich, or filter log entries before they are processed by drivers. There are several types of middleware that can be used at different stages of the logging pipeline.
 
@@ -52,11 +89,18 @@ Middleware in Contextual provides a powerful way to transform, enrich, or filter
 Context middleware allows you to add or modify context data for all log entries:
 
 ```dart
-logger.addMiddleware(() => {
-  'timestamp': DateTime.now().toIso8601String(),
-  'hostname': Platform.hostname,
-  'process_id': Platform.pid,
-});
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [
+      () => {
+        'timestamp': DateTime.now().toIso8601String(),
+        'hostname': Platform.hostname,
+        'process_id': Platform.pid,
+      },
+    ],
+  ),
+);
 ```
 
 ### Driver Middleware
@@ -76,7 +120,7 @@ class SensitiveDataFilter implements DriverMiddleware {
   }
 }
 
-logger.addLogMiddleware(SensitiveDataFilter());
+logger.addDriverMiddleware<ConsoleLogDriver>(SensitiveDataFilter());
 ```
 
 ### Channel-Specific Middleware
@@ -84,13 +128,19 @@ logger.addLogMiddleware(SensitiveDataFilter());
 Middleware can be applied to specific channels:
 
 ```dart
-logger.addChannel(
-  'webhook',
-  WebhookLogDriver(Uri.parse('https://logs.example.com')),
-  middlewares: [
-    RateLimitMiddleware(maxRequestsPerMinute: 60),
-    RetryMiddleware(maxRetries: 3),
-  ],
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      WebhookChannel(
+        WebhookOptions(url: Uri.parse('https://logs.example.com')),
+        name: 'webhook',
+        middlewares: [
+          RateLimitMiddleware(maxRequestsPerMinute: 60),
+          RetryMiddleware(maxRetries: 3),
+        ],
+      ),
+    ],
+  ),
 );
 ```
 
@@ -101,37 +151,34 @@ logger.addChannel(
 Add request IDs to all logs within a web application:
 
 ```dart
-class RequestTracker implements DriverMiddleware {
+class RequestTracker implements Middleware {
   final _requestIds = AsyncLocal<String>();
-  
+
   void setRequestId(String id) {
     _requestIds.value = id;
   }
-  
+
   @override
-  Future<LogEntry?> process(LogEntry entry) async {
+  LogEntry handle(LogEntry entry) {
     if (_requestIds.value == null) return entry;
-    
+
     final newContext = Context({
       ...entry.record.context.all(),
       'request_id': _requestIds.value,
     });
-    
-    return LogEntry(
-      LogRecord(
-        time: entry.record.time,
-        level: entry.record.level,
-        message: entry.record.message,
-        context: newContext,
-        stackTrace: entry.record.stackTrace,
-      ),
-      entry.formattedMessage,
-    );
+
+    return entry.copyWith(context: newContext);
   }
 }
 
 final requestTracker = RequestTracker();
-logger.addLogMiddleware(requestTracker);
+
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [requestTracker],
+  ),
+);
 
 // In your request handler:
 app.use((Request request, Response response) {
@@ -145,31 +192,27 @@ app.use((Request request, Response response) {
 Add stack traces and additional context to error logs:
 
 ```dart
-class ErrorEnhancer implements DriverMiddleware {
+class ErrorEnhancer implements Middleware {
   @override
-  Future<LogEntry?> process(LogEntry entry) async {
+  LogEntry handle(LogEntry entry) {
     if (entry.record.level < Level.error) return entry;
-    
+
     final enhanced = Context({
       ...entry.record.context.all(),
       'stack_trace': entry.record.stackTrace.toString(),
       'error_time': DateTime.now().toIso8601String(),
     });
-    
-    return LogEntry(
-      LogRecord(
-        time: entry.record.time,
-        level: entry.record.level,
-        message: entry.record.message,
-        context: enhanced,
-        stackTrace: entry.record.stackTrace,
-      ),
-      entry.formattedMessage,
-    );
+
+    return entry.copyWith(context: enhanced);
   }
 }
 
-logger.addLogMiddleware(ErrorEnhancer());
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [ErrorEnhancer()],
+  ),
+);
 ```
 
 ### Log Sampling
@@ -177,25 +220,28 @@ logger.addLogMiddleware(ErrorEnhancer());
 Implement probabilistic logging for high-volume environments:
 
 ```dart
-class SamplingMiddleware implements DriverMiddleware {
+class SamplingMiddleware implements Middleware {
   final double sampleRate;
   final Random _random = Random();
-  
+
   SamplingMiddleware({this.sampleRate = 0.1}); // 10% sample rate
-  
+
   @override
-  Future<LogEntry?> process(LogEntry entry) async {
+  LogEntry? handle(LogEntry entry) {
     // Always log errors and above
     if (entry.record.level >= Level.error) return entry;
-    
+
     // Sample other logs based on rate
     return _random.nextDouble() < sampleRate ? entry : null;
   }
 }
 
-logger.addLogMiddleware(SamplingMiddleware(
-  sampleRate: 0.01, // 1% sample rate
-));
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [SamplingMiddleware(sampleRate: 0.01)],
+  ),
+);
 ```
 
 ### Performance Monitoring
@@ -203,22 +249,22 @@ logger.addLogMiddleware(SamplingMiddleware(
 Track and log slow operations:
 
 ```dart
-class PerformanceMonitor implements DriverMiddleware {
+class PerformanceMonitor implements Middleware {
   final Duration threshold;
   final _operationStarts = <String, DateTime>{};
-  
+
   PerformanceMonitor({
     this.threshold = const Duration(milliseconds: 100),
   });
-  
+
   void startOperation(String operationId) {
     _operationStarts[operationId] = DateTime.now();
   }
-  
+
   void endOperation(String operationId) {
     final start = _operationStarts.remove(operationId);
     if (start == null) return;
-    
+
     final duration = DateTime.now().difference(start);
     if (duration > threshold) {
       logger.warning('Slow operation detected', Context({
@@ -228,18 +274,24 @@ class PerformanceMonitor implements DriverMiddleware {
       }));
     }
   }
-  
+
   @override
-  Future<LogEntry?> process(LogEntry entry) async {
+  LogEntry handle(LogEntry entry) {
     // Pass through all logs, this middleware only generates new ones
     return entry;
   }
 }
 
 final perfMonitor = PerformanceMonitor(
-  threshold: Duration(milliseconds: 200),
+  threshold: const Duration(milliseconds: 200),
 );
-logger.addLogMiddleware(perfMonitor);
+
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [perfMonitor],
+  ),
+);
 
 // Usage:
 perfMonitor.startOperation('db-query-1');
@@ -252,17 +304,17 @@ perfMonitor.endOperation('db-query-1');
 Filter logs based on the environment:
 
 ```dart
-class EnvironmentFilter implements DriverMiddleware {
+class EnvironmentFilter implements Middleware {
   final String environment;
   final Set<Level> allowedLevels;
-  
+
   EnvironmentFilter({
     required this.environment,
     required this.allowedLevels,
   });
-  
+
   @override
-  Future<LogEntry?> process(LogEntry entry) async {
+  LogEntry? handle(LogEntry entry) {
     switch (environment) {
       case 'production':
         return allowedLevels.contains(entry.record.level) ? entry : null;
@@ -274,16 +326,25 @@ class EnvironmentFilter implements DriverMiddleware {
   }
 }
 
-logger.addLogMiddleware(EnvironmentFilter(
-  environment: 'production',
-  allowedLevels: {
-    Level.warning,
-    Level.error,
-    Level.critical,
-    Level.alert,
-    Level.emergency,
-  },
-));
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+    ],
+    middlewares: [
+      EnvironmentFilter(
+        environment: 'production',
+        allowedLevels: {
+          Level.warning,
+          Level.error,
+          Level.critical,
+          Level.alert,
+          Level.emergency,
+        },
+      ),
+    ],
+  ),
+);
 ```
 
 ## Best Practices
@@ -291,29 +352,46 @@ logger.addLogMiddleware(EnvironmentFilter(
 1. **Order Matters**
    ```dart
    // Correct order: sensitive data is filtered before being sent to external service
-   logger.addLogMiddleware(SensitiveDataFilter());
-   logger.addLogMiddleware(ExternalServiceMiddleware());
-   
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [WebhookChannel(WebhookOptions(url: Uri.parse('...')), name: 'webhook')],
+       middlewares: [SensitiveDataFilter(), ExternalServiceMiddleware()],
+     ),
+   );
+
    // Incorrect order: sensitive data might be sent before being filtered
-   logger.addLogMiddleware(ExternalServiceMiddleware());
-   logger.addLogMiddleware(SensitiveDataFilter());
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [WebhookChannel(WebhookOptions(url: Uri.parse('...')), name: 'webhook')],
+       middlewares: [ExternalServiceMiddleware(), SensitiveDataFilter()],
+     ),
+   );
    ```
 
 2. **Keep Middleware Focused**
    ```dart
    // Good: Single responsibility
-   logger.addLogMiddleware(SensitiveDataFilter());
-   logger.addLogMiddleware(PerformanceMonitor());
-   
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+       middlewares: [SensitiveDataFilter(), PerformanceMonitor()],
+     ),
+   );
+
    // Bad: Too many responsibilities
-   logger.addLogMiddleware(CombinedMiddleware()); // Does filtering, monitoring, etc.
+   final logger = await Logger.create(
+     config: LogConfig(
+       channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+       middlewares: [CombinedMiddleware()], // Does filtering, monitoring, etc.
+     ),
+   );
    ```
 
 3. **Handle Errors Gracefully**
    ```dart
-   class SafeMiddleware implements DriverMiddleware {
+   class SafeMiddleware implements Middleware {
      @override
-     Future<LogEntry?> process(LogEntry entry) async {
+     LogEntry handle(LogEntry entry) {
        try {
          // Your middleware logic
          return entry;
@@ -328,9 +406,9 @@ logger.addLogMiddleware(EnvironmentFilter(
 
 4. **Use Async Operations Carefully**
    ```dart
-   class AsyncMiddleware implements DriverMiddleware {
+   class AsyncMiddleware implements Middleware {
      @override
-     Future<LogEntry?> process(LogEntry entry) async {
+     LogEntry handle(LogEntry entry) async {
        // Avoid long-running operations that could block logging
        final result = await someQuickOperation();
        return entry;
@@ -340,6 +418,6 @@ logger.addLogMiddleware(EnvironmentFilter(
 
 ## Next Steps
 
-- [Driver Configuration](../api/drivers/configuration)
+- [Driver Configuration](../api/drivers/configuration.md)
 - [API Overview](../api/overview)
-- [Getting Started](../getting-started) 
+- [Getting Started](../getting-started.md)

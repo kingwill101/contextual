@@ -7,38 +7,36 @@
 
 part of 'formatter_settings_typed.dart';
 
-class FormatterSettingsTypedMapper
-    extends ClassMapperBase<FormatterSettingsTyped> {
-  FormatterSettingsTypedMapper._();
+class FormatterSettingsMapper extends ClassMapperBase<FormatterSettings> {
+  FormatterSettingsMapper._();
 
-  static FormatterSettingsTypedMapper? _instance;
-  static FormatterSettingsTypedMapper ensureInitialized() {
+  static FormatterSettingsMapper? _instance;
+  static FormatterSettingsMapper ensureInitialized() {
     if (_instance == null) {
-      MapperContainer.globals.use(_instance = FormatterSettingsTypedMapper._());
+      MapperContainer.globals.use(_instance = FormatterSettingsMapper._());
     }
     return _instance!;
   }
 
   @override
-  final String id = 'FormatterSettingsTyped';
+  final String id = 'FormatterSettings';
 
-  static bool _$includeInterpolation(FormatterSettingsTyped v) =>
+  static bool _$includeInterpolation(FormatterSettings v) =>
       v.includeInterpolation;
-  static const Field<FormatterSettingsTyped, bool> _f$includeInterpolation =
-      Field(
-        'includeInterpolation',
-        _$includeInterpolation,
-        opt: true,
-        def: true,
-      );
+  static const Field<FormatterSettings, bool> _f$includeInterpolation = Field(
+    'includeInterpolation',
+    _$includeInterpolation,
+    opt: true,
+    def: true,
+  );
 
   @override
-  final MappableFields<FormatterSettingsTyped> fields = const {
+  final MappableFields<FormatterSettings> fields = const {
     #includeInterpolation: _f$includeInterpolation,
   };
 
-  static FormatterSettingsTyped _instantiate(DecodingData data) {
-    return FormatterSettingsTyped(
+  static FormatterSettings _instantiate(DecodingData data) {
+    return FormatterSettings(
       includeInterpolation: data.dec(_f$includeInterpolation),
     );
   }
@@ -46,88 +44,88 @@ class FormatterSettingsTypedMapper
   @override
   final Function instantiate = _instantiate;
 
-  static FormatterSettingsTyped fromMap(Map<String, dynamic> map) {
-    return ensureInitialized().decodeMap<FormatterSettingsTyped>(map);
+  static FormatterSettings fromMap(Map<String, dynamic> map) {
+    return ensureInitialized().decodeMap<FormatterSettings>(map);
   }
 
-  static FormatterSettingsTyped fromJson(String json) {
-    return ensureInitialized().decodeJson<FormatterSettingsTyped>(json);
+  static FormatterSettings fromJson(String json) {
+    return ensureInitialized().decodeJson<FormatterSettings>(json);
   }
 }
 
-mixin FormatterSettingsTypedMappable {
+mixin FormatterSettingsMappable {
   String toJson() {
-    return FormatterSettingsTypedMapper.ensureInitialized()
-        .encodeJson<FormatterSettingsTyped>(this as FormatterSettingsTyped);
+    return FormatterSettingsMapper.ensureInitialized()
+        .encodeJson<FormatterSettings>(this as FormatterSettings);
   }
 
   Map<String, dynamic> toMap() {
-    return FormatterSettingsTypedMapper.ensureInitialized()
-        .encodeMap<FormatterSettingsTyped>(this as FormatterSettingsTyped);
+    return FormatterSettingsMapper.ensureInitialized()
+        .encodeMap<FormatterSettings>(this as FormatterSettings);
   }
 
-  FormatterSettingsTypedCopyWith<
-    FormatterSettingsTyped,
-    FormatterSettingsTyped,
-    FormatterSettingsTyped
+  FormatterSettingsCopyWith<
+    FormatterSettings,
+    FormatterSettings,
+    FormatterSettings
   >
   get copyWith =>
-      _FormatterSettingsTypedCopyWithImpl<
-        FormatterSettingsTyped,
-        FormatterSettingsTyped
-      >(this as FormatterSettingsTyped, $identity, $identity);
+      _FormatterSettingsCopyWithImpl<FormatterSettings, FormatterSettings>(
+        this as FormatterSettings,
+        $identity,
+        $identity,
+      );
   @override
   String toString() {
-    return FormatterSettingsTypedMapper.ensureInitialized().stringifyValue(
-      this as FormatterSettingsTyped,
+    return FormatterSettingsMapper.ensureInitialized().stringifyValue(
+      this as FormatterSettings,
     );
   }
 
   @override
   bool operator ==(Object other) {
-    return FormatterSettingsTypedMapper.ensureInitialized().equalsValue(
-      this as FormatterSettingsTyped,
+    return FormatterSettingsMapper.ensureInitialized().equalsValue(
+      this as FormatterSettings,
       other,
     );
   }
 
   @override
   int get hashCode {
-    return FormatterSettingsTypedMapper.ensureInitialized().hashValue(
-      this as FormatterSettingsTyped,
+    return FormatterSettingsMapper.ensureInitialized().hashValue(
+      this as FormatterSettings,
     );
   }
 }
 
-extension FormatterSettingsTypedValueCopy<$R, $Out>
-    on ObjectCopyWith<$R, FormatterSettingsTyped, $Out> {
-  FormatterSettingsTypedCopyWith<$R, FormatterSettingsTyped, $Out>
-  get $asFormatterSettingsTyped => $base.as(
-    (v, t, t2) => _FormatterSettingsTypedCopyWithImpl<$R, $Out>(v, t, t2),
+extension FormatterSettingsValueCopy<$R, $Out>
+    on ObjectCopyWith<$R, FormatterSettings, $Out> {
+  FormatterSettingsCopyWith<$R, FormatterSettings, $Out>
+  get $asFormatterSettings => $base.as(
+    (v, t, t2) => _FormatterSettingsCopyWithImpl<$R, $Out>(v, t, t2),
   );
 }
 
-abstract class FormatterSettingsTypedCopyWith<
+abstract class FormatterSettingsCopyWith<
   $R,
-  $In extends FormatterSettingsTyped,
+  $In extends FormatterSettings,
   $Out
 >
     implements ClassCopyWith<$R, $In, $Out> {
   $R call({bool? includeInterpolation});
-  FormatterSettingsTypedCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
+  FormatterSettingsCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
   );
 }
 
-class _FormatterSettingsTypedCopyWithImpl<$R, $Out>
-    extends ClassCopyWithBase<$R, FormatterSettingsTyped, $Out>
-    implements
-        FormatterSettingsTypedCopyWith<$R, FormatterSettingsTyped, $Out> {
-  _FormatterSettingsTypedCopyWithImpl(super.value, super.then, super.then2);
+class _FormatterSettingsCopyWithImpl<$R, $Out>
+    extends ClassCopyWithBase<$R, FormatterSettings, $Out>
+    implements FormatterSettingsCopyWith<$R, FormatterSettings, $Out> {
+  _FormatterSettingsCopyWithImpl(super.value, super.then, super.then2);
 
   @override
-  late final ClassMapperBase<FormatterSettingsTyped> $mapper =
-      FormatterSettingsTypedMapper.ensureInitialized();
+  late final ClassMapperBase<FormatterSettings> $mapper =
+      FormatterSettingsMapper.ensureInitialized();
   @override
   $R call({bool? includeInterpolation}) => $apply(
     FieldCopyWithData({
@@ -136,7 +134,7 @@ class _FormatterSettingsTypedCopyWithImpl<$R, $Out>
     }),
   );
   @override
-  FormatterSettingsTyped $make(CopyWithData data) => FormatterSettingsTyped(
+  FormatterSettings $make(CopyWithData data) => FormatterSettings(
     includeInterpolation: data.get(
       #includeInterpolation,
       or: $value.includeInterpolation,
@@ -144,8 +142,8 @@ class _FormatterSettingsTypedCopyWithImpl<$R, $Out>
   );
 
   @override
-  FormatterSettingsTypedCopyWith<$R2, FormatterSettingsTyped, $Out2>
-  $chain<$R2, $Out2>(Then<$Out2, $R2> t) =>
-      _FormatterSettingsTypedCopyWithImpl<$R2, $Out2>($value, $cast, t);
+  FormatterSettingsCopyWith<$R2, FormatterSettings, $Out2> $chain<$R2, $Out2>(
+    Then<$Out2, $R2> t,
+  ) => _FormatterSettingsCopyWithImpl<$R2, $Out2>($value, $cast, t);
 }
 

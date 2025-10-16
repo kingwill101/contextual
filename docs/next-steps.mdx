@@ -1,13 +1,72 @@
 ---
 title: Next Steps
-description: What to do next
+description: What to do after getting started with Contextual
 ---
 
-Now that you have initialized your docs.page project, here are some next steps to get you started:
+Now that you've set up basic logging with Contextual, here are some next steps to enhance your logging setup:
 
-- [Configuring Your Site](https://use.docs.page/configuration): Learn how to configure your documentation site using the `docs.json` file.
-- [Writing Content](https://use.docs.page/writing-content): Learn how to write content using Markdown in your documentation site.
-- [Components](https://use.docs.page/components): Use built in components to improve the readability of your documentation.
-- [Publishing your site](https://use.docs.page/publishing): Publish your docs to a GitHub repository for instant access to your documentation.
+- **[API Reference](../api/overview)**: Dive deeper into Contextual's classes, methods, and configuration options.
+- **[Advanced Features](../advanced/middleware)**: Learn about middleware for transforming logs, batching for performance, and integrating with frameworks like Shelf.
+- **[Driver Guides](../api/drivers/daily-file)**: Explore specific drivers for file logging, webhooks, and more.
+- **[Migration Guide](../migration/v2)**: If upgrading from v1, see how to migrate your code to the new typed APIs.
 
-There's a lot more to discover with docs.page - head over to the [docs](https://use.docs.page) to learn more.
+## Common Next Steps
+
+### Add Structured Context
+
+Enhance your logs with rich context for better debugging:
+
+```dart
+logger.withContext({
+  'user_id': currentUser.id,
+  'request_id': generateRequestId(),
+  'environment': 'production',
+}).info('Processing payment');
+```
+
+### Configure Multiple Outputs
+
+Send logs to different destinations based on environment:
+
+```dart
+final config = LogConfig(
+  environment: 'production',
+  channels: [
+    ConsoleChannel(ConsoleOptions(), name: 'console'), // For development
+    DailyFileChannel(DailyFileOptions(path: 'logs/app'), name: 'file'), // For production
+    WebhookChannel(WebhookOptions(url: Uri.parse('https://logs.example.com')), name: 'remote'), // For monitoring
+  ],
+);
+```
+
+### Add Middleware
+
+Transform or filter logs automatically:
+
+```dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [
+      () => {'timestamp': DateTime.now().toIso8601String()},
+      ErrorEnhancer(), // Custom middleware
+    ],
+  ),
+);
+```
+
+### Handle Shutdown Properly
+
+Ensure logs are written before your app exits:
+
+```dart
+final logger = await Logger.create(/* config with file drivers */);
+
+try {
+  // Your application logic
+} finally {
+  await logger.shutdown();
+}
+```
+
+For more examples and best practices, check out the [API Reference](../api/overview) and [Advanced Topics](../advanced/middleware).

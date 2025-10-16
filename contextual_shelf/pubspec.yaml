@@ -1,15 +1,23 @@
 name: contextual_shelf
 description: shelf using contextual logger
-version: "0.1.0"
+version: "0.2.0"
 resolution: workspace
 
 homepage: https://github.com/kingwill101/contextual/contextual_shelf
-
+repository: https://github.com/kingwill101/contextual
 issue_tracker: https://github.com/kingwill101/contextual/issues
+topics:
+  - logging
+  - shelf
+  - middleware
+  - http
+  - observability
+funding:
+  - https://www.buymeacoffee.com/kingwill101
 
-environment: 
+environment:
   sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
-  contextual: ^1.2.0
+  contextual: ^2.0.0
   shelf: ^1.4.2

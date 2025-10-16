@@ -40,7 +40,8 @@ class AddUserMiddleware implements DriverMiddleware {
   @override
   DriverMiddlewareResult handle(LogEntry entry) {
     return DriverMiddlewareResult.modify(
-        entry.copyWith(message: '${entry.message} | User: $username'));
+      entry.copyWith(message: '${entry.message} | User: $username'),
+    );
   }
 }
 
@@ -68,48 +69,58 @@ class ExceptionLogFormatter extends LogTypeFormatter<Exception> {
 
 void main() async {
   // Configuration for multiple logging channels
-  final logConfig = TypedLogConfig(
+  final logConfig = LogConfig(
     environment: 'production',
     channels: [
       ConsoleChannel(ConsoleOptions(), name: 'console'),
-      DailyFileChannel(DailyFileOptions(path: 'logs/app', retentionDays: 7), name: 'file'),
-      WebhookChannel(WebhookOptions(url: Uri.parse('https://webhook-test.com/b61f3ee766b6354bb67881df60708333')),
-          name: 'webhook'),
+      DailyFileChannel(
+        DailyFileOptions(path: 'logs/app', retentionDays: 7),
+        name: 'file',
+      ),
+      WebhookChannel(
+        WebhookOptions(
+          url: Uri.parse(
+            'https://webhook-test.com/b61f3ee766b6354bb67881df60708333',
+          ),
+        ),
+        name: 'webhook',
+      ),
     ],
   );
 
   // Initialize Logger with fluent configuration
-  final logManager = await Logger.create(typedConfig: logConfig);
-  logManager.environment('production')
+  final logManager = await Logger.create(config: logConfig);
+  logManager
+      .environment('production')
       .formatter(PrettyLogFormatter()) // Human-friendly pretty logs
-      .addMiddleware(() =>
-          {'app': 'MyApp', 'version': '1.2.0'}) // Global context middleware
+      .addMiddleware(
+        () => {'app': 'MyApp', 'version': '1.2.0'},
+      ) // Global context middleware
       .addLogMiddleware(
-          BlockSensitiveLogsMiddleware()) // Global sensitive log blocker
+        BlockSensitiveLogsMiddleware(),
+      ) // Global sensitive log blocker
       .addLogMiddleware(AddUserMiddleware('john_doe')) // Enrich logs with user
       .addDriverMiddleware<ConsoleLogDriver>(
-          AddTagMiddleware('DEBUG-CONSOLE')) // Add console-specific tags
+        AddTagMiddleware('DEBUG-CONSOLE'),
+      ) // Add console-specific tags
       .addTypeFormatter<Map<String, dynamic>>(
-          StructuredMapFormatter()) // JSON structure formatter
+        StructuredMapFormatter(),
+      ) // JSON structure formatter
       .addTypeFormatter<Exception>(
-          ExceptionLogFormatter()); // Exception formatter
+        ExceptionLogFormatter(),
+      ); // Exception formatter
 
   // Enable centralized batching for driver dispatch (optional)
-  await logManager.batched(LogSinkConfig(
-    batchSize: 50,
-    flushInterval: Duration(milliseconds: 500),
-  ));
+  await logManager.batched(
+    LogSinkConfig(batchSize: 50, flushInterval: Duration(milliseconds: 500)),
+  );
 
   // Example 1: Logging simple messages
   logManager.info('Application started successfully.');
   // logManager.error('An unexpected error occurred during execution.');
 
   // // Example 2: Structured data logging
-  logManager.info({
-    'event': 'login',
-    'user': 'john_doe',
-    'status': 'success',
-  });
+  logManager.info({'event': 'login', 'user': 'john_doe', 'status': 'success'});
 
   // Example 3: Logging an exception
   try {
@@ -119,7 +130,9 @@ void main() async {
   }
 
   // Example 4: Logging to specific channels (console and file)
-  logManager.channels(['console', 'file']).critical('Critical system failure detected!');
+  logManager
+      .channels(['console', 'file'])
+      .critical('Critical system failure detected!');
 
   // Example 5: Dynamic on-demand channel configuration
   final customChannel = logManager.buildChannel({
@@ -133,11 +146,13 @@ void main() async {
 
   // Example 6: Adding shared context and logging
   logManager
-      .withContext({'requestId': 'abcd1234', 'operation': 'user-update'}).info(
-          'User details updated successfully.');
+      .withContext({'requestId': 'abcd1234', 'operation': 'user-update'})
+      .info('User details updated successfully.');
 
   // Example 7: Logging stack configuration (console + webhook)
-  logManager.channels(['console', 'webhook']).alert('System is under heavy load.');
+  logManager
+      .channels(['console', 'webhook'])
+      .alert('System is under heavy load.');
 
   // Shutdown to flush logs
   await logManager.shutdown();

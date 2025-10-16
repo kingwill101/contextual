@@ -4,15 +4,15 @@ import '../format/formatter_settings.dart' as core;
 part 'formatter_settings_typed.mapper.dart';
 
 @MappableClass()
-class FormatterSettingsTyped with FormatterSettingsTypedMappable {
+class FormatterSettings with FormatterSettingsMappable {
   final bool includeInterpolation;
 
-  const FormatterSettingsTyped({this.includeInterpolation = true});
+  const FormatterSettings({this.includeInterpolation = true});
 
   core.FormatterSettings toCore() => core.FormatterSettings(
-        includeTimestamp: true,
-        includeLevel: true,
-        includePrefix: true,
-        includeContext: true,
-      );
+    includeTimestamp: true,
+    includeLevel: true,
+    includePrefix: true,
+    includeContext: true,
+  );
 }

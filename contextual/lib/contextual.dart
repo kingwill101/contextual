@@ -71,7 +71,6 @@
 
 library;
 
-
 export 'src/context.dart';
 export 'src/context_middleware.dart';
 export 'src/driver/console.dart';
@@ -90,8 +89,14 @@ export 'src/log_entry.dart';
 export 'src/log_level.dart';
 export 'src/logger.dart';
 export 'src/logger_extensions.dart';
-export 'src/typed/log_config.dart' show TypedLogConfig;
-export 'src/typed/channel_config.dart' show ConsoleChannel, DailyFileChannel, WebhookChannel, StackChannel, SamplingChannel;
+export 'src/typed/log_config.dart' show LogConfig;
+export 'src/typed/channel_config.dart'
+    show
+        ConsoleChannel,
+        DailyFileChannel,
+        WebhookChannel,
+        StackChannel,
+        SamplingChannel;
 export 'src/typed/daily_file_options.dart' show DailyFileOptions;
 export 'src/typed/console_options.dart' show ConsoleOptions;
 export 'src/typed/webhook_options.dart' show WebhookOptions;
