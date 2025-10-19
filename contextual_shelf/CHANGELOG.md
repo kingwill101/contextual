@@ -1,3 +1,6 @@
+## [0.2.0] - 2025-10-15
+- Bump contextual version to 2.0
+
 ## [0.1.0] - 2025-02-15
 
 ### Added
@@ -54,4 +57,3 @@
 - Initial development release
 - Basic middleware structure
 - Proof of concept implementation
-
