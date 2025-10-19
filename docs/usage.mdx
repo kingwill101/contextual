@@ -17,8 +17,6 @@ void main() async {
       channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
     ),
   );
-}
-
   logger.info('Application started');
   logger.warning('This is a warning');
   logger.error('Something went wrong', Context({'error_code': 500}));
@@ -162,6 +160,7 @@ try {
 
 ## Next Steps
 
-- [API Reference](../api/overview)
-- [Advanced Features](../advanced/middleware)
-- [Migration Guide](../migration/v2)
+- [API Reference](../api/overview.mdx)
+- [Advanced Features](../advanced/middleware.mdx)
+- [Migration Guide](../migration/v2.mdx)
+- [Type Formatters & Printers](../advanced/type-formatters.mdx)

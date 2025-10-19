@@ -1,0 +1,142 @@
+---
+title: Type Formatters & Printers
+description: Customize how Contextual renders specific value types and channel output using LogTypeFormatter and formatter APIs.
+---
+
+# Custom Type Formatters & Printers
+
+Contextual resolves the final string that reaches a channel in two steps:
+
+1. **Type formatters** (`LogTypeFormatter<T>`) convert strongly-typed data objects into strings before they reach a channel formatter.
+2. **Channel/message formatters** (`LogMessageFormatter`) wrap the already formatted message with level, timestamp, context, or any other metadata.
+
+By combining both layers you can create rich, structured logs without sprinkling `.toString()` calls throughout your code.
+
+## When to reach for type formatters
+
+Type formatters are ideal when you frequently log:
+
+- Domain objects (orders, users, payloads) that need a consistent representation
+- Complex collections (maps, lists) that benefit from stable formatting
+- Errors/exceptions where you want to include stack traces or metadata by default
+
+Registered formatters are global to the logger instance. The most specific formatter wins, so adding a formatter for `User` does not affect other types.
+
+## Registering a formatter
+
+Implement `LogTypeFormatter<T>` and register it with `logger.addTypeFormatter`. The formatter receives the log level plus the ambient `Context`, enabling level-aware formatting.
+
+```dart
+import 'package:contextual/contextual.dart';
+
+class UserFormatter extends LogTypeFormatter<User> {
+  const UserFormatter();
+
+  @override
+  String format(Level level, User user, Context context) {
+    final tags = context['tags'];
+    return '[User:${user.id}] ${user.email} tags=$tags';
+  }
+}
+
+final logger = await Logger.create(
+  config: const LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+  ),
+)
+  ..addTypeFormatter(const UserFormatter());
+
+logger.info(User(id: '42', email: 'ops@example.com'));
+```
+
+Re-registering with the same type replaces the previous formatter, making overrides straightforward for tests or special environments.
+
+## Built-in helpers
+
+Contextual ships with a few reusable formatters under `contextual/src/type_format/`:
+
+- `LevelFormatter` – renders `Level` enums in uppercase.
+- `MapFormatter` – pretty-prints nested maps and can delegate to other type formatters per value type.
+
+You can mix and match these with your own formatters:
+
+```dart
+logger
+  ..addTypeFormatter(const LevelFormatter())
+  ..addTypeFormatter(MapFormatter(valueFormatters: {
+    DateTime: const IsoDateFormatter(),
+  }));
+
+class IsoDateFormatter extends LogTypeFormatter<DateTime> {
+  const IsoDateFormatter();
+
+  @override
+  String format(Level level, DateTime value, Context context) {
+    return value.toUtc().toIso8601String();
+  }
+}
+```
+
+## Formatting nested and structured data
+
+Type formatters make it easy to control JSON-like payloads without switching to a JSON formatter globally. For example, you can redact secrets or compress verbose payloads:
+
+```dart
+class PaymentFormatter extends LogTypeFormatter<PaymentPayload> {
+  const PaymentFormatter();
+
+  @override
+  String format(Level level, PaymentPayload payload, Context context) {
+    final masked = payload.cardNumber.replaceRange(6, 12, '******');
+    return 'Payment(amount: ${payload.amount}, card: $masked, status: ${payload.status})';
+  }
+}
+
+logger.addTypeFormatter(const PaymentFormatter());
+logger.debug(paymentPayload); // Always redacted
+```
+
+Because type formatters run before channel formatters, you still benefit from JSON or pretty formatters downstream.
+
+## Channel-level printers (message formatters)
+
+Type formatters solve per-object rendering. To change the *envelope* of each log entry, supply a custom `LogMessageFormatter` when configuring channels. This is sometimes described as a "printer" because it controls the complete line written by the driver.
+
+```dart
+class MinimalFormatter extends LogMessageFormatter {
+  const MinimalFormatter();
+
+  @override
+  String format(Level level, String message, Context context) {
+    final requestId = context['request_id'] ?? 'n/a';
+    return '${level.name.toUpperCase()} [$requestId] $message';
+  }
+}
+
+final logger = await Logger.create(
+  config: const LogConfig(
+    channels: [
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console',
+        formatter: MinimalFormatter(),
+      ),
+    ],
+  ),
+);
+```
+
+Channel formatters are isolated per channel—mix and match minimal text for stdout with `JsonLogFormatter(prettyPrint: true)` for files, all while reusing the same type formatters.
+
+## Testing and maintenance tips
+
+- **Keep formatters pure:** Avoid stateful operations or network calls in `format`. Log formatting should never throw.
+- **Prefer const constructors:** They allow reuse and tree shaking when possible.
+- **Scope to feature modules:** Expose helper functions (e.g., `registerBillingFormatters(Logger logger)`) to keep registration in one place.
+- **Snapshot tests:** Capture formatted output in tests to prevent regressions when changing formatters.
+
+## Next steps
+
+- [API Overview](/api/overview.mdx#type-formatters)
+- [Middleware](../advanced/middleware.mdx)
+- [Daily File Driver](../drivers/daily-file.mdx)

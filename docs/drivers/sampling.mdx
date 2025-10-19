@@ -1,3 +1,8 @@
+---
+title: Sampling Driver
+description: Use SamplingChannel to reduce log volume while retaining high-signal events.
+---
+
 # Sampling Driver
 
 Reduce log volume without losing signal. The Sampling driver probabilistically drops logs based on per-level rates and forwards retained logs to another destination. It’s ideal for high‑volume services where debug/info logs can overwhelm storage or network bandwidth.

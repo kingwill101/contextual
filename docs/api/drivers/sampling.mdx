@@ -1,3 +1,8 @@
+---
+title: Sampling Driver
+description: Reduce log volume by routing messages through probabilistic sampling strategies.
+---
+
 # Sampling Driver
 
 Reduce log volume without losing signal. The Sampling driver probabilistically drops logs based on per-level rates and forwards retained logs to another destination. It’s ideal for high‑volume services where debug/info logs can overwhelm storage or network bandwidth.
@@ -248,10 +253,10 @@ final logger = await Logger.create(
 
 ## See also
 
-- [API Overview](/api/overview)
-- [Driver Configuration](configuration)
-- [Console Driver](console)
-- [Daily File Driver](daily-file)
-- [Webhook Driver](webhook)
-- [Stack Driver](stack)
-- [Batching & Shutdown](../../advanced/batching-and-shutdown)
+- [API Overview](/api/overview.mdx)
+- [Driver Configuration](configuration.mdx)
+- [Console Driver](console.mdx)
+- [Daily File Driver](daily-file.mdx)
+- [Webhook Driver](webhook.mdx)
+- [Stack Driver](stack.mdx)
+- [Batching & Shutdown](../../advanced/batching-and-shutdown.mdx)

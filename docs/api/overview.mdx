@@ -1,5 +1,9 @@
-# API Overview
+---
+title: API Overview
+description: Key classes, configuration patterns, and advanced capabilities available in Contextual.
+---
 
+# API Overview
 
 Contextual's API is designed to be intuitive and flexible, providing a rich set of features for logging in Dart applications.
 
@@ -218,7 +222,7 @@ Custom formatting for specific types:
 logger.addTypeFormatter<Error>(ErrorLogFormatter());
 ```
 
-Type formatters work with the new serialization system.
+Type formatters work with the new serialization system. For a deeper dive, including real-world patterns and custom printers, see [Type Formatters & Printers](../advanced/type-formatters.mdx).
 
 ## Configuration
 
@@ -301,13 +305,7 @@ Typed configs support JSON serialization for configuration files.
 
 ## Next Steps
 
-- [Daily File Driver](../drivers/daily-file)
-- [Middleware Guide](../advanced/middleware)
-
-
-
-
-
-
-
-- [Migration to v2](../migration/v2)
+- [Daily File Driver](../drivers/daily-file.mdx)
+- [Middleware Guide](../advanced/middleware.mdx)
+- [Migration to v2](../migration/v2.mdx)
+- [Type Formatters & Printers](../advanced/type-formatters.mdx)

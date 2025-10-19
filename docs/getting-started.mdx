@@ -1,5 +1,6 @@
 ---
 title: Getting Started
+description: Install Contextual, configure your first logger, and learn key concepts quickly.
 ---
 
 # Getting Started
@@ -59,14 +60,14 @@ final logger = await Logger.create(
     channels: [DailyFileChannel(DailyFileOptions(path: 'logs/app'))],
   ),
 );
-```
-
+ 
 try {
   // Your application code
 } finally {
   // Always shutdown the logger when using file drivers
   await logger.shutdown();
 }
+```
 
 ### Typed Configuration
 
@@ -218,6 +219,6 @@ logger.addMiddleware(() => {
 
 ## Next Steps
 
-- Check out the [API Reference](/api/overview) for detailed documentation
-- Learn about [Advanced Features](advanced/middleware)
-- Explore [Driver Guides](api/drivers/daily-file) for configuration examples
+- Check out the [API Reference](api/overview.mdx) for detailed documentation
+- Learn about [Advanced Features](advanced/middleware.mdx)
+- Explore [Driver Guides](api/drivers/daily-file.mdx) for configuration examples

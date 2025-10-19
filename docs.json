@@ -163,6 +163,10 @@
           "href": "/advanced/middleware"
         },
         {
+          "title": "Type Formatters & Printers",
+          "href": "/advanced/type-formatters"
+        },
+        {
           "title": "Batching & Shutdown",
           "href": "/advanced/batching-and-shutdown"
         },

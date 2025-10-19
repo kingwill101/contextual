@@ -1,3 +1,8 @@
+---
+title: Middleware
+description: Transform, enrich, and filter Contextual log entries across global, channel, and driver pipelines.
+---
+
 # Middleware
 
 Middleware allows transforming or filtering log entries before they reach a driver.
@@ -51,7 +56,7 @@ logger.addDriverMiddleware<ConsoleLogDriver>(RateLimitMiddleware());
 
 ## Writing Middleware
 
-Implement [Middleware] for global or channel middleware, or [DriverMiddleware] for driver-specific.
+Implement `Middleware` for global or channel middleware, or `DriverMiddleware` for driver-specific.
 
 ```dart
 class SensitiveDataFilter implements Middleware {
@@ -418,6 +423,6 @@ final logger = await Logger.create(
 
 ## Next Steps
 
-- [Driver Configuration](../api/drivers/configuration)
-- [API Overview](../api/overview)
-- [Getting Started](../getting-started)
+- [Driver Configuration](../api/drivers/configuration.mdx)
+- [API Overview](../api/overview.mdx)
+- [Getting Started](../getting-started.mdx)

@@ -1,3 +1,8 @@
+---
+title: Driver Configuration
+description: Configure typed channels and options for Console, File, Webhook, and more.
+---
+
 # Driver Configuration
 
 This guide details how to configure each driver type in Contextual using the typed configuration API. Typed configurations provide compile-time safety and autocompletion.
@@ -107,7 +112,7 @@ final config = LogConfig(
           Level.info: 0.5,    // Log 50% of info messages
           Level.warning: 1.0, // Log all warning messages
         },
-        wrapped: ConsoleChannel(ConsoleOptions(), name: 'wrapped_console'),
+        wrappedChannel: 'console',
       ),
       name: 'sampled',
     ),
@@ -118,7 +123,7 @@ final logger = await Logger.create(config: config);
 
 Configuration options:
 - `rates`: Map of log levels to sampling probabilities (0.0 - 1.0)
-- `wrapped`: The channel to sample
+- `wrappedChannel`: The channel to sample (must reference an existing channel name)
 
 ## Full Configuration Example
 
@@ -149,7 +154,7 @@ final config = LogConfig(
     SamplingChannel(
       SamplingOptions(
         rates: {Level.debug: 0.1, Level.info: 0.5},
-        wrapped: ConsoleChannel(ConsoleOptions(), name: 'wrapped_console'),
+        wrappedChannel: 'console',
       ),
       name: 'sampled',
     ),
