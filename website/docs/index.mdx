@@ -1,0 +1,72 @@
+---
+title: Contextual
+description: Structured, typed, ergonomic logging for Dart
+slug: /
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Contextual
+
+:::info
+Contextual is a powerful, flexible logging system for Dart that provides **typed configuration**, **structured logging**, **multiple output channels**, and **ergonomic APIs**.
+:::
+
+## Installation
+
+<Tabs>
+  <TabItem value="pubspec" label="pubspec.yaml">
+
+```yaml
+dependencies:
+  contextual: ^2.0.0
+```
+
+  </TabItem>
+  <TabItem value="terminal" label="Terminal">
+
+```bash
+dart pub add contextual
+```
+
+  </TabItem>
+</Tabs>
+
+## Quick start
+
+Get started with Contextual in just a few lines:
+
+```dart
+import 'package:contextual/contextual.dart';
+
+void main() async {
+  final logger = await Logger.create(
+    config: LogConfig(
+      channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    ),
+  );
+
+  logger.info('Hello from Contextual!');
+}
+```
+
+:::tip
+**That's it!** Your logger is now ready to use with console output, pretty formatting, and structured logging capabilities.
+:::
+
+## Next steps
+
+1. **Explore the API**: Learn about [configuration options](api/overview) and available drivers.
+2. **Add middleware**: Enhance your logs with [middleware](advanced/middleware) for filtering and enrichment.
+3. **Configure batching**: Optimize performance with [batching & shutdown](advanced/batching-and-shutdown).
+4. **Integrate with frameworks**: Use [Shelf integration](advanced/shelf-integration) for web applications.
+
+### Resources
+
+- 📚 [API Reference](api/overview) - Complete API documentation
+- 🔧 [Driver Configuration](api/drivers/configuration) - Configure output channels
+- 🧩 [Type Formatters & Printers](advanced/type-formatters) - Control how complex objects render
+- 📁 [Daily File Driver](api/drivers/daily-file) - File-based logging
+- 🔄 [Migration Guide](migration/v2) - Upgrade from v1 to v2

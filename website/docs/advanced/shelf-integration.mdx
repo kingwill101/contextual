@@ -1,0 +1,198 @@
+---
+title: Shelf Integration
+description: Capture HTTP request and response logs using Contextual with Shelf applications.
+---
+
+# Shelf Integration Tips
+
+The `contextual_shelf` package provides an HttpLogger middleware that captures request/response metadata and logs via your configured drivers.
+
+## Usage
+
+```dart
+import 'package:contextual/contextual.dart';
+import 'package:contextual_shelf/contextual_shelf.dart';
+import 'package:shelf/shelf.dart';
+
+void main() async {
+  final logger = await Logger.create(
+    config: LogConfig(
+      channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    ),
+  );
+
+  final httpLogger = HttpLogger(DefaultLogProfile(), DefaultLogWriter());
+
+  final handler = const Pipeline()
+      .addMiddleware(httpLogger.middleware)
+      .addHandler((req) => Response.ok('ok'));
+
+  // serve ...
+}
+```
+
+## Tips
+
+- Consider a dedicated channel for HTTP logging (e.g., name: `http`), and target it with `logger.forDriver<ConsoleLogDriver>('http')` when you need driver-specific output.
+- Combine with batching via `LogConfig.batching` for high-throughput endpoints.
+- Add driver middleware to redact sensitive headers or query parameters.
+
+## Components at a glance
+
+`contextual_shelf` is built from three composable pieces:
+
+- **`HttpLogger`** – the Shelf middleware that measures requests, applies log profiles, and delegates to a writer.
+- **`LogProfile`** – decides *whether* a request should be logged.
+- **`LogWriter`** – decides *how* a request is logged, including context payloads, sanitization, and severity.
+
+The defaults (`LogNonGetRequests` + `DefaultLogWriter`) work out of the box, but each piece can be swapped independently.
+
+## Custom log profiles
+
+Implement `LogProfile` to control which requests produce logs. This is useful for sampling static assets or limiting health checks.
+
+```dart
+class HealthCheckAwareProfile implements LogProfile {
+  const HealthCheckAwareProfile();
+
+  @override
+  bool shouldLogRequest(Request request) {
+    final path = request.url.path;
+    if (path == 'healthz' || path == 'readiness') {
+      return false; // skip noisy probes
+    }
+    if (request.method == 'GET') {
+      // Only log GETs from /api or when explicitly flagged
+      return path.startsWith('api/') ||
+          request.headers['x-log-request'] == 'true';
+    }
+    // Always log mutating verbs
+    return true;
+  }
+}
+
+final httpLogger = HttpLogger(
+  const HealthCheckAwareProfile(),
+  DefaultLogWriter(logger),
+);
+```
+
+Profiles run synchronously during each request, so keep logic fast and side-effect free.
+
+## Sanitizing sensitive data
+
+`DefaultLogWriter` includes a lightweight `Sanitizer` (`contextual_shelf/lib/src/sanitizer.dart:1-23`) that masks headers and nested maps. Configure the mask and fields to scrub:
+
+```dart
+final logWriter = DefaultLogWriter(
+  logger,
+  sanitizer: Sanitizer(mask: '[REDACTED]'),
+);
+
+// Extend DefaultLogWriter to choose which headers to hide
+class PaymentsLogWriter extends DefaultLogWriter {
+  PaymentsLogWriter(Logger logger)
+      : super(logger, sanitizer: Sanitizer(mask: '******'));
+
+  @override
+  void logRequest(
+    Request request,
+    Response response,
+    DateTime start,
+    Duration elapsed, {
+    int? memory,
+    int? pid,
+  }) {
+    super.logRequest(
+      request,
+      response,
+      start,
+      elapsed,
+      memory: memory,
+      pid: pid,
+    );
+  }
+}
+```
+
+To sanitize bodies or query parameters, subclass `DefaultLogWriter` and preprocess `request.readAsString()` or `request.url.queryParameters` before calling `logger.withContext`.
+
+## Custom log writers
+
+`DefaultLogWriter` (`contextual_shelf/lib/src/default_log_writer.dart:6-67`) enriches each entry with:
+
+- Sanitized request and response headers
+- Request duration in milliseconds
+- Captured RSS memory and OS process ID (when available)
+- Optional error details and stack traces
+
+Create your own `LogWriter` to change severity levels, push structured payloads, or emit multiple log entries per request:
+
+```dart
+class AuditLogWriter implements LogWriter {
+  AuditLogWriter(this.logger);
+
+  final Logger logger;
+
+  @override
+  void logRequest(
+    Request request,
+    Response response,
+    DateTime start,
+    Duration elapsed, {
+    int? memory,
+    int? pid,
+  }) {
+    final context = Context({
+      'method': request.method,
+      'status': response.statusCode,
+      'duration_ms': elapsed.inMilliseconds,
+      'user': request.headers['x-user-id'],
+    });
+
+    logger.withContext(context).info('HTTP ${request.requestedUri}');
+  }
+
+  @override
+  void logError(
+    Request request,
+    Object error,
+    StackTrace stackTrace,
+    DateTime start,
+    Duration elapsed, {
+    int? memory,
+    int? pid,
+  }) {
+    logger.error('HTTP failure', Context({
+      'error': error.toString(),
+      'stack_trace': stackTrace.toString(),
+      'method': request.method,
+      'path': request.requestedUri.path,
+    }));
+  }
+}
+```
+
+Plug it into the middleware:
+
+```dart
+logger.addMiddleware(() => {'service': 'api'});
+
+final httpLogger = HttpLogger(
+  const LogNonGetRequests(),
+  AuditLogWriter(logger),
+);
+```
+
+## Metrics and context enrichment
+
+`HttpLogger` captures elapsed time, memory usage, and process ID (`contextual_shelf/lib/src/http_logger.dart:7-57`). Use channel-specific middlewares or the new [Type Formatters & Printers](/advanced/type-formatters) guide to format these values consistently.
+
+Tip: register a dedicated channel (e.g., `http`) tied to a JSON formatter and keep application logs separate from request traces.
+
+## Testing the middleware
+
+- Unit test custom profiles by asserting `shouldLogRequest` outputs.
+- Use Shelf's `serveRequests` with a test handler to ensure your writer emits the expected context for happy-path and error cases.
+- Capture formatted output by adding an in-memory channel during tests (e.g., `logger.addChannel('memory', TestDriver())`).
+- For integration suites, point the HTTP channel at a temporary file and assert JSON payloads.

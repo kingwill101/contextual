@@ -1,0 +1,282 @@
+---
+title: Stack Driver
+description: Combine multiple logging channels into a single fan-out destination.
+---
+
+# Stack Driver
+
+Fan out a single log to multiple destinations. The Stack driver lets you combine multiple channels (e.g., console, file, webhook) into one logical output so that a single log call is delivered everywhere you need it.
+
+## Overview
+
+- Send each log entry to multiple underlying drivers
+- Reference existing channels by name (typed configuration)
+- Control failure behavior with `ignoreExceptions`
+- Compose with other drivers (sampling, file rotation, webhooks)
+- Great for “critical” or “audit” logs that must land in more than one place
+
+---
+
+## Options
+
+When using the typed configuration, the Stack driver is configured via `StackOptions`:
+
+```dart
+class StackOptions {
+  final List<String> channels; // names of other channels to stack
+  final bool ignoreExceptions;
+
+  const StackOptions({
+    required this.channels,
+    this.ignoreExceptions = false,
+  });
+}
+```
+
+- `channels`: Names of other channels to fan out to. These must be defined elsewhere in your configuration with matching `name` values.
+- `ignoreExceptions` (default: `false`): If `true`, the stack will continue delivering logs to other destinations when one destination throws. If `false`, exceptions propagate so you can fail fast.
+
+When using the imperative API, you create a `StackLogDriver` with a list of existing `LogDriver` instances:
+```dart
+StackLogDriver(
+  [driver1, driver2, ...],
+  { bool ignoreExceptions = /* driver-specific default */ }
+)
+```
+
+---
+
+## Usage
+
+### Typed configuration (recommended)
+
+Define your base channels (console, file, webhook), then define a stack that fans out to them by referencing their names:
+
+```dart
+import 'package:contextual/contextual.dart';
+
+Future<void> main() async {
+  final logger = await Logger.create(
+    config: LogConfig(
+      channels: [
+        ConsoleChannel(
+          ConsoleOptions(),
+          name: 'console',
+        ),
+        DailyFileChannel(
+          DailyFileOptions(path: 'logs/app', retentionDays: 14),
+          name: 'file',
+        ),
+        WebhookChannel(
+          WebhookOptions(url: Uri.parse('https://logs.example.com/ingest')),
+          name: 'remote',
+        ),
+        // Stack channel referencing existing channels by name:
+        StackChannel(
+          StackOptions(
+            channels: ['console', 'file', 'remote'],
+            ignoreExceptions: true, // continue even if one fails
+          ),
+          name: 'stack',
+        ),
+      ],
+    ),
+  );
+
+  // This single call goes to console, file, and webhook
+  logger['stack']?.error('Critical failure', Context({'order_id': 'ord_777'}));
+}
+```
+
+Notes:
+- Define base channels before the stack so they can be referenced by name.
+- Each underlying channel can have its own formatter (e.g., pretty for console, JSON for webhook).
+
+### Imperative wiring (raw drivers)
+
+Programmatically compose a `StackLogDriver`. Useful for dynamic wiring or tests:
+
+```dart
+import 'package:contextual/contextual.dart';
+
+Future<void> main() async {
+  final logger = await Logger.create();
+
+  // Base channels
+  logger.addChannel('console', ConsoleLogDriver());
+  logger.addChannel(
+    'file',
+    DailyFileLogDriver.fromOptions(
+      DailyFileOptions(path: 'logs/app', retentionDays: 14),
+    ),
+  );
+
+  // Build a stack by reusing underlying drivers:
+  final consoleDriver = logger.getChannel('console')!.driver;
+  final fileDriver = logger.getChannel('file')!.driver;
+
+  logger.addChannel(
+    'stack',
+    StackLogDriver([consoleDriver, fileDriver], ignoreExceptions: true),
+  );
+
+  // Fan out to both console and file
+  logger['stack']?.warning('This is delivered to multiple outputs');
+}
+```
+
+### Targeting the stack
+
+- By name:
+  ```dart
+  logger['stack']?.info('Hello, world!');
+  ```
+- By driver type (not specific to stack, but useful):
+  ```dart
+  logger.forDriver<ConsoleLogDriver>().debug('This goes to all console outputs');
+  ```
+
+---
+
+## ignoreExceptions
+
+Controls error behavior when one of the underlying drivers fails:
+
+- `ignoreExceptions: true` (recommended for resilience)
+  - If an underlying driver throws, the stack continues with the remaining drivers.
+  - Prevents a single destination from breaking all logging.
+
+- `ignoreExceptions: false`
+  - If an underlying driver throws, the stack surfaces the exception to the caller.
+  - Prefer when you need strict failure visibility and fail-fast behavior.
+
+Typed example:
+
+```dart
+StackChannel(
+  StackOptions(
+    channels: ['console', 'file', 'remote'],
+    ignoreExceptions: true, // continue even if one fails
+  ),
+  name: 'stack',
+);
+```
+
+---
+
+## Examples
+
+### 1) Critical logs to multiple destinations
+
+```dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(DailyFileOptions(path: 'logs/app'), name: 'file'),
+      WebhookChannel(
+        WebhookOptions(url: Uri.parse('https://logs.example.com/ingest')),
+        name: 'remote',
+      ),
+      StackChannel(
+        StackOptions(
+          channels: ['console', 'file', 'remote'],
+          ignoreExceptions: true,
+        ),
+        name: 'stack',
+      ),
+    ],
+  ),
+);
+
+// Critical messages go everywhere:
+logger['stack']?.critical('Database unavailable', Context({'cluster': 'eu-1'}));
+```
+
+### 2) Stack + Sampling (reduce noise)
+
+Wrap your stack with a `SamplingChannel` for high-volume levels:
+
+```dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(DailyFileOptions(path: 'logs/app'), name: 'file'),
+      StackChannel(
+        StackOptions(channels: ['console', 'file'], ignoreExceptions: true),
+        name: 'stack',
+      ),
+      // Sample the stack via a separate channel:
+      SamplingChannel(
+        SamplingOptions(
+          rates: {
+            Level.debug: 0.1, // keep 10% of debug logs
+            Level.info: 1.0,  // keep all info logs
+          },
+          wrappedChannel: 'stack',
+        ),
+        name: 'stack_sampled',
+      ),
+    ],
+  ),
+);
+
+// Route noisy logs through the sampled stack
+logger['stack_sampled']?.debug('This debug log may be sampled');
+```
+
+### 3) Per-destination formatters
+
+Apply formatters at the underlying channel level:
+
+```dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(
+        ConsoleOptions(),
+        name: 'console',
+        formatter: PrettyLogFormatter(),
+      ),
+      WebhookChannel(
+        WebhookOptions(url: Uri.parse('https://logs.example.com/ingest')),
+        name: 'remote',
+        formatter: JsonLogFormatter(),
+      ),
+      StackChannel(
+        StackOptions(channels: ['console', 'remote'], ignoreExceptions: true),
+        name: 'stack',
+      ),
+    ],
+  ),
+);
+
+logger['stack']?.info('One message, two formats');
+```
+
+---
+
+## Best Practices
+
+- Prefer `ignoreExceptions: true` to avoid one failing destination blocking others.
+- Keep your stack simple; too many destinations increase latency and failure surface area.
+- Apply formatters per underlying channel to match destination expectations.
+- Avoid recursive/indirect loops (e.g., a stack referencing itself).
+- For high-volume logs:
+  - Use `SamplingChannel` to reduce noise at lower levels.
+  - Pair with `DailyFileChannel` for local durability and retention.
+- Always call `await logger.shutdown()` on application exit, especially when file drivers are involved.
+- Treat remote endpoints as unreliable; keep a Console/File fallback readily available.
+
+---
+
+## See also
+
+- [API Overview](/api/overview)
+- [Driver Configuration](/api/drivers/configuration)
+- [Console Driver](/api/drivers/console)
+- [Daily File Driver](/api/drivers/daily-file)
+- [Webhook Driver](/api/drivers/webhook)
+- [Middleware (advanced)](/advanced/middleware)
+- [Batching & Shutdown](/advanced/batching-and-shutdown)

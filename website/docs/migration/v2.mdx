@@ -1,0 +1,98 @@
+---
+title: Migration to v2
+description: Upgrade guide covering API changes, new configuration, and best practices for Contextual v2.
+---
+
+# Migration to v2
+
+Contextual v2 introduces typed configuration, fluent APIs, and a single middleware pipeline for improved ergonomics and safety. This guide covers the key changes and migration steps.
+
+## Key Changes
+
+- **Typed Configuration**: Replace map-based config with `LogConfig` and typed channel classes for compile-time safety.
+- **Fluent APIs**: Use `logger.forDriver<T>()` for type-based selection and `logger['name']` for name-based targeting.
+- **Single Middleware Pipeline**: Middleware now applies in one place with defined order: global → channel → driver-type.
+- **Batching**: Configure batching via `LogConfig.batching` instead of per-driver settings.
+
+## Migration Examples
+
+### Logger Creation and Configuration
+
+**Before (v1):**
+```dart
+final logger = Logger()
+  ..addChannel('console', ConsoleLogDriver())
+  ..addChannel('file', DailyFileLogDriver('logs/app.log'));
+```
+
+**After (v2):**
+```dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [
+      ConsoleChannel(ConsoleOptions(), name: 'console'),
+      DailyFileChannel(DailyFileOptions(path: 'logs/app'), name: 'file'),
+    ],
+  ),
+);
+```
+
+### Channel Selection
+
+**Before (v1):**
+```dart
+logger['console'].info('Message');
+```
+
+**After (v2):**
+```dart
+logger['console'].info('Message'); // Name-based (unchanged)
+logger.forDriver<ConsoleLogDriver>().info('Message'); // Type-based (new)
+```
+
+### Middleware
+
+**Before (v1):**
+```dart
+logger.addMiddleware(() => {'timestamp': DateTime.now()});
+logger.addDriverMiddleware<ConsoleLogDriver>(MyMiddleware());
+```
+
+**After (v2):**
+```dart
+final logger = await Logger.create(
+  config: LogConfig(
+    channels: [ConsoleChannel(ConsoleOptions(), name: 'console')],
+    middlewares: [() => {'timestamp': DateTime.now()}],
+  ),
+);
+```
+
+### Driver Construction
+
+**Before (v1):**
+```dart
+final driver = DailyFileLogDriver('logs/app', retentionDays: 30);
+```
+
+**After (v2):**
+```dart
+final driver = DailyFileLogDriver.fromOptions(
+  DailyFileOptions(path: 'logs/app', retentionDays: 30),
+);
+```
+
+## Breaking Changes
+
+- Removed `LogConfig`, `ChannelConfig`, and all `fromConfig` constructors.
+- Removed string-based driver registration (`addChannel('name', Driver())`).
+- Middleware signature changed: `handle(LogEntry)` instead of `handle(String, LogEntry)`.
+- Environment and level are now strings in `LogConfig` (e.g., `'production'`, `'info'`).
+- Batching is configured globally, not per-driver.
+
+## Tips
+
+- Use typed configuration for better IDE support and fewer runtime errors.
+- The single middleware pipeline simplifies debugging and ensures consistent ordering.
+- Most applications won't need explicit `shutdown()` unless using file drivers.
+- Update tests to use the new APIs and remove references to deprecated classes.

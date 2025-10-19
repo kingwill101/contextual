@@ -81,9 +81,24 @@ Each package contains detailed examples in its `example` directory:
 
 ## Documentation
 
+- [Contextual Docs](https://kingwill101.github.io/contextual/) (Docusaurus-powered site)
 - [API Reference](https://pub.dev/documentation/contextual/latest/)
 - [Contextual Package](contextual/README.md)
 - [Contextual Shelf Package](contextual_shelf/README.md)
+
+### Working with the docs locally
+
+```bash
+cd website
+npm install
+npm start
+```
+
+The dev server reloads on file changes. To build the static site:
+
+```bash
+npm run build
+```
 
 ## Features
 
