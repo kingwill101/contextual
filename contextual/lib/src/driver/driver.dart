@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import '../log_entry.dart';
 
 /// Defines an interface for a log driver that can be used to log messages.

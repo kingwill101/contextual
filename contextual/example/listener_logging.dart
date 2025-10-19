@@ -7,7 +7,6 @@ Future<void> main() async {
     print('[${entry.record.time}] ${entry.record.level}: ${entry.message}');
   });
 
-
   logger.info('This message is handled by the listener.');
   logger.error('This error is also handled by the listener.');
 }

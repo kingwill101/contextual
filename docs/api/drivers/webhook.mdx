@@ -74,15 +74,17 @@ Future<void> main() async {
 
 ### Targeting the webhook output
 
-- By name:
-  ```dart
-  logger['remote']?.info('Only goes to the remote webhook');
-  ```
+#### By name
 
-- By driver type:
-  ```dart
-  logger.forDriver<WebhookLogDriver>().warning('All webhook drivers receive this');
-  ```
+```dart
+logger['remote']?.info('Only goes to the remote webhook');
+```
+
+#### By driver type
+
+```dart
+logger.forDriver<WebhookLogDriver>().warning('All webhook drivers receive this');
+```
 
 ---
 

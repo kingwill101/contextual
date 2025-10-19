@@ -34,11 +34,7 @@ void main() {
     group('unless()', () {
       test('executes callback when condition is false', () {
         var executed = false;
-        context.unless(
-          () => false,
-          (ctx) => executed = true,
-          null,
-        );
+        context.unless(() => false, (ctx) => executed = true, null);
         expect(executed, isTrue);
       });
 

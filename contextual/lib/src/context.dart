@@ -61,7 +61,7 @@ class Context {
   Map<String, dynamic> only(List<String> keys) {
     return {
       for (var key in keys)
-        if (_data.containsKey(key)) key: _data[key]
+        if (_data.containsKey(key)) key: _data[key],
     };
   }
 
@@ -70,7 +70,7 @@ class Context {
   Map<String, dynamic> onlyHidden(List<String> keys) {
     return {
       for (var key in keys)
-        if (_hiddenData.containsKey(key)) key: _hiddenData[key]
+        if (_hiddenData.containsKey(key)) key: _hiddenData[key],
     };
   }
 
@@ -118,8 +118,10 @@ class Context {
 
   /// Returns a new map that merges the key-value pairs from the `_data` map and the `_hiddenData` map.
   /// This provides access to both the visible and hidden data in the context.
-  Map<String, dynamic> all() =>
-      {..._data, ..._hiddenData}; // Merge visible + hidden
+  Map<String, dynamic> all() => {
+    ..._data,
+    ..._hiddenData,
+  }; // Merge visible + hidden
 
   /// Clears the data context, removing all key-value pairs.
   void clear() => _data.clear();
@@ -212,7 +214,6 @@ class Context {
   }
 
   @override
-
   /// Returns a string representation of the context, where each key-value pair
   /// is separated by a comma.
   String toString() =>

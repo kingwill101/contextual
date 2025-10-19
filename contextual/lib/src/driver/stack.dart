@@ -39,12 +39,14 @@ class StackLogDriver extends LogDriver {
   /// The [_drivers] list specifies the underlying drivers to send logs to.
   /// If [ignoreExceptions] is true, failures in one driver won't prevent
   /// logs from being sent to other drivers.
-  StackLogDriver(this._drivers, {this.ignoreExceptions = false}) : super("stack");
+  StackLogDriver(this._drivers, {this.ignoreExceptions = false})
+    : super("stack");
 
   /// Typed helper to construct a StackLogDriver from already resolved drivers.
-  static StackLogDriver fromOptions(List<LogDriver> drivers, {bool ignoreExceptions = false})
-      => StackLogDriver(drivers, ignoreExceptions: ignoreExceptions);
-
+  static StackLogDriver fromOptions(
+    List<LogDriver> drivers, {
+    bool ignoreExceptions = false,
+  }) => StackLogDriver(drivers, ignoreExceptions: ignoreExceptions);
 
   @override
   Future<void> log(LogEntry entry) async {
@@ -89,10 +91,7 @@ class StackDriverException implements Exception {
   final Map<String, dynamic> errors;
 
   /// Creates a new stack driver exception.
-  StackDriverException(
-    this.message, {
-    this.errors = const {},
-  });
+  StackDriverException(this.message, {this.errors = const {}});
 
   @override
   String toString() {

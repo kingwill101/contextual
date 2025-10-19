@@ -50,7 +50,7 @@ abstract class LogMessageFormatter {
   ///
   /// If [settings] is not provided, uses default settings.
   LogMessageFormatter({FormatterSettings? settings})
-      : settings = settings ?? FormatterSettings();
+    : settings = settings ?? FormatterSettings();
 
   /// Converts a log record into a formatted string.
   ///

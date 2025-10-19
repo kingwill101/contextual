@@ -36,8 +36,8 @@ class LogQueue {
   LogQueue({
     required Future<void> Function(List<LogEntry>) processor,
     LogQueueConfig? config,
-  })  : config = config ?? const LogQueueConfig(),
-        _processor = processor {
+  }) : config = config ?? const LogQueueConfig(),
+       _processor = processor {
     _initialize();
   }
 

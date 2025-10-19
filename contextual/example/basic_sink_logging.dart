@@ -2,8 +2,7 @@ import 'package:contextual/contextual.dart';
 
 /// This example demonstrates basic sink logging with batching and auto-flush behavior.
 void main() async {
-  final logger = Logger()
-    ..addChannel('file', ConsoleLogDriver());
+  final logger = Logger()..addChannel('file', ConsoleLogDriver());
 
   await logger.batched(
     LogSinkConfig(
@@ -22,10 +21,12 @@ void main() async {
   logger['file'].emergency('This will flush immediately');
 
   // Add some context to the logs
-  logger.withContext({
-    'batch': 1,
-    'timestamp': DateTime.now().toIso8601String(),
-  })['file'].info('Batched message with context');
+  logger
+      .withContext({
+        'batch': 1,
+        'timestamp': DateTime.now().toIso8601String(),
+      })['file']
+      .info('Batched message with context');
 
   // Wait for auto-flush or call shutdown to ensure all messages are written
   // await logger.shutdown();

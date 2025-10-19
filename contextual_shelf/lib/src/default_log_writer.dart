@@ -8,7 +8,7 @@ class DefaultLogWriter implements LogWriter {
   final Sanitizer sanitizer;
 
   DefaultLogWriter(this.logger, {Sanitizer? sanitizer})
-      : sanitizer = sanitizer ?? Sanitizer();
+    : sanitizer = sanitizer ?? Sanitizer();
 
   @override
   void logRequest(
@@ -20,7 +20,8 @@ class DefaultLogWriter implements LogWriter {
     int? pid,
   }) {
     // Build the log message string
-    final message = '${request.method} ${request.requestedUri} '
+    final message =
+        '${request.method} ${request.requestedUri} '
         '[${response.statusCode}] ${elapsedTime.inMilliseconds}ms';
 
     // Prepare additional data to include in context
@@ -47,7 +48,8 @@ class DefaultLogWriter implements LogWriter {
     int? pid,
   }) {
     // Build the log message string
-    final message = 'ERROR: ${request.method} ${request.requestedUri} '
+    final message =
+        'ERROR: ${request.method} ${request.requestedUri} '
         '${elapsedTime.inMilliseconds}ms';
 
     // Prepare additional data to include in context

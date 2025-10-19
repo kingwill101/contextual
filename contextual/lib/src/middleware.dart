@@ -29,17 +29,17 @@ class DriverMiddlewareResult {
   /// Creates a [DriverMiddlewareResult] instance that indicates the log entry should be
   /// processed without any modifications.
   DriverMiddlewareResult.proceed()
-      : action = DriverMiddlewareAction.proceed,
-        modifiedEntry = null;
+    : action = DriverMiddlewareAction.proceed,
+      modifiedEntry = null;
 
   /// Creates a [DriverMiddlewareResult] instance that indicates the log entry processing
   /// should be stopped.
   DriverMiddlewareResult.stop()
-      : action = DriverMiddlewareAction.stop,
-        modifiedEntry = null;
+    : action = DriverMiddlewareAction.stop,
+      modifiedEntry = null;
 
   /// Creates a [DriverMiddlewareResult] instance that indicates the log entry should be
   /// modified with the provided [newEntry].
   DriverMiddlewareResult.modify(LogEntry this.modifiedEntry)
-      : action = DriverMiddlewareAction.modify;
+    : action = DriverMiddlewareAction.modify;
 }
