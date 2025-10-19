@@ -17,11 +17,7 @@ class ApiLogProfile implements LogProfile {
 void main() async {
   // Create a logger with multiple channels
   final logger = await Logger.create()
-    ..addChannel(
-      'console',
-      ConsoleLogDriver(),
-      formatter: PrettyLogFormatter(),
-    )
+    ..addChannel('console', ConsoleLogDriver(), formatter: PrettyLogFormatter())
     ..addChannel(
       'file',
       DailyFileLogDriver('logs/server.log'),
@@ -51,11 +47,9 @@ void main() async {
 
   // Log server startup
   logger.info(
-      'Server started',
-      Context({
-        'port': server.port,
-        'address': server.address.host,
-      }));
+    'Server started',
+    Context({'port': server.port, 'address': server.address.host}),
+  );
 }
 
 /// Example request handler that demonstrates different scenarios
