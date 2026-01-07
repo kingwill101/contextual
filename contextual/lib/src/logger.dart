@@ -643,22 +643,6 @@ class Logger extends AbstractLogger {
   /// Adds a type-specific formatter for custom object logging.
   ///
   /// Allows specialized formatting for specific object types.
-
-  /// Utility: check if a channel exists by name.
-  bool hasChannel(String name) => _channels.any((c) => c.name == name);
-
-  /// Utility: get a channel by name (null if missing).
-  Channel<LogDriver>? getChannel(String name) => _channels
-      .cast<Channel<LogDriver>?>()
-      .firstWhere((c) => c?.name == name, orElse: () => null);
-
-  /// Utility: remove a channel by name. Returns true if removed.
-  bool removeChannel(String name) {
-    final before = _channels.length;
-    _channels.removeWhere((c) => c.name == name);
-    return _channels.length < before;
-  }
-
   ///
   /// Parameters:
   /// - [formatter]: The type formatter instance to add.
@@ -667,6 +651,25 @@ class Logger extends AbstractLogger {
   Logger addTypeFormatter<T>(LogTypeFormatter<T> formatter) {
     _typeFormatters[T] = formatter;
     return this;
+  }
+
+  /// Checks if a channel exists by name.
+  bool hasChannel(String name) => _channels.any((c) => c.name == name);
+
+  /// Gets a channel by name.
+  ///
+  /// Returns null if no channel with the specified name exists.
+  Channel<LogDriver>? getChannel(String name) => _channels
+      .cast<Channel<LogDriver>?>()
+      .firstWhere((c) => c?.name == name, orElse: () => null);
+
+  /// Removes a channel by name.
+  ///
+  /// Returns true if the channel was found and removed, false otherwise.
+  bool removeChannel(String name) {
+    final before = _channels.length;
+    _channels.removeWhere((c) => c.name == name);
+    return _channels.length < before;
   }
 
   /// Creates a new log driver from configuration.
@@ -916,7 +919,20 @@ class Logger extends AbstractLogger {
     return formatters;
   }
 
-  // Type-based selection using registry
+  /// Selects channels by their driver type for the next log operation.
+  ///
+  /// This allows targeting specific types of drivers (e.g., only ConsoleLogDriver)
+  /// without knowing their channel names.
+  ///
+  /// Parameters:
+  /// - [name]: Optional specific channel name to target within the type.
+  ///
+  /// Returns the Logger instance for method chaining.
+  ///
+  /// Example:
+  /// ```dart
+  /// logger.forDriver<ConsoleLogDriver>().info('Console only');
+  /// ```
   Logger forDriver<T extends LogDriver>({String? name}) {
     final map = _typeRegistry[T];
     if (map == null || map.isEmpty) return this;
@@ -931,6 +947,14 @@ class Logger extends AbstractLogger {
     return this;
   }
 
+  /// Selects channels by multiple driver types for the next log operation.
+  ///
+  /// Allows targeting multiple types of drivers simultaneously.
+  ///
+  /// Parameters:
+  /// - [types]: Iterable of LogDriver types to target.
+  ///
+  /// Returns the Logger instance for method chaining.
   Logger forDrivers(Iterable<Type> types) {
     final selected = <String>{};
     for (final t in types) {
