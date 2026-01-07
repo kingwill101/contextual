@@ -36,8 +36,8 @@ dependencies:
 import 'package:contextual/contextual.dart';
 
 void main() {
-  // Create a logger
-  final logger = Logger()
+  // Create a logger with a minimum level
+  final logger = Logger(level: Level.info)
     ..withContext({'app': 'MyApp'});
 
   // Basic logging
@@ -55,11 +55,40 @@ void main() {
     })
   );
 }
+
+See the [example](example) folder for detailed examples, including [named_loggers_example.dart](example/named_loggers_example.dart) and [named_loggers_basic.dart](example/named_loggers_basic.dart) for named logger usage.
+
+## Named Loggers
+
+Contextual supports hierarchical named loggers similar to the standard `logging` package:
+
+```dart
+// Get named loggers
+final root = Logger.root; // Root logger
+final app = Logger(name: 'app', level: Level.info); // Child of root with level
+final db = Logger(name: 'app.database', level: Level.debug); // Child of app with level
+
+// Child loggers inherit configuration from parents unless overridden
+db.info('Database connected'); // Uses inherited channels, overridden level
+
+// Add channels at different levels
+root.addChannel('console', ConsoleLogDriver());
+app.addChannel('file', DailyFileLogDriver('app.log'));
+
+// db will log to both console (inherited) and file (from app)
+db.error('Query failed');
 ```
 
-See the [example](example) folder for detailed examples.
+Named loggers automatically create parent loggers and inherit:
+- Log levels (children can override by setting level in constructor or calling setLevel)
+- Channels (children inherit and can add their own)
+- Formatters and type formatters
+- Context and middleware
 
-## Configuration
+The logger's name is automatically included in the log context as `logger: 'name'` (or `logger: 'root'` for the root logger).
+
+This allows for fine-grained control over logging in different parts of your application.
+
 Load configuration from JSON:
 
 

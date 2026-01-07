@@ -29,6 +29,7 @@ dependencies:
   intl: ^0.20.2
   gato: ^0.0.5+1
   dart_mappable: ^4.3.0
+  meta: ^1.17.0
 
 dev_dependencies:
   lints: ^6.0.0
@@ -36,3 +37,5 @@ dev_dependencies:
   test: ^1.26.3
   build_runner: ^2.4.11
   dart_mappable_builder: ^4.3.0
+false_secrets:
+  - example/microservice/certs/*

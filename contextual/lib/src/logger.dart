@@ -5,6 +5,7 @@ import 'package:contextual/src/format/null.dart';
 import 'package:contextual/src/log_entry.dart';
 import 'package:contextual/src/record.dart';
 import 'package:contextual/src/types.dart';
+import 'package:meta/meta.dart';
 
 import 'abstract_logger.dart';
 import 'channel.dart';
@@ -76,6 +77,61 @@ typedef LogListener = void Function(LogEntry entry);
 /// );
 ///
 class Logger extends AbstractLogger {
+  /// Registry of all named loggers.
+  static final Map<String, Logger> _loggers = {};
+
+  /// Gets the logger registry (for testing).
+  @visibleForTesting
+  static Map<String, Logger> get loggers => _loggers;
+
+  /// The root logger.
+  static Logger get root => _loggers.putIfAbsent('', () => Logger._named(''));
+
+  /// Creates a logger.
+  ///
+  /// If [name] is provided, creates a named logger with hierarchical parenting.
+  /// Names are hierarchical, separated by dots. For example:
+  /// - Logger(name: 'app') creates a logger named 'app'
+  /// - Logger(name: 'app.database') creates a logger named 'app.database' with 'app' as parent
+  ///
+  /// Child loggers inherit configuration from their parents.
+  ///
+  /// If [name] is null, creates an unnamed logger with the specified configuration options.
+  factory Logger({
+    String? name,
+    Level? level,
+    String? environment,
+    LogMessageFormatter? formatter,
+    FormatterSettings? formatterSettings,
+    bool defaultChannelEnabled = true,
+  }) {
+    if (name != null) {
+      return _getLogger(name, level: level);
+    } else {
+      return Logger._(
+        name: '',
+        parent: null,
+        level: level,
+        environment: environment,
+        formatter: formatter,
+        formatterSettings: formatterSettings,
+        defaultChannelEnabled: defaultChannelEnabled,
+        useIsolate: false,
+        useIsolateSink: false,
+        sinkConfig: null,
+      );
+    }
+  }
+
+  /// The logger's name. Empty string for root logger.
+  final String name;
+
+  /// The parent logger, or null for root logger.
+  final Logger? parent;
+
+  /// Child loggers of this logger.
+  final List<Logger> _children = [];
+
   /// Map of channel names to their corresponding log drivers.
   /// Each channel represents a distinct logging destination.
   final List<Channel<LogDriver>> _channels = [];
@@ -118,6 +174,9 @@ class Logger extends AbstractLogger {
   /// The minimum log level to process. Messages below this level are ignored.
   Level _minimumLevel = Level.debug;
 
+  /// Whether the level was explicitly set (to avoid inheritance).
+  bool _levelSet = false;
+
   /// Indicates whether the default `console` channel is enabled.
   final bool defaultChannelEnabled;
 
@@ -138,6 +197,35 @@ class Logger extends AbstractLogger {
 
   /// Configuration for the log sink
   final LogSinkConfig? _sinkConfig;
+
+  /// Gets or creates a logger with the specified name.
+  ///
+  /// Handles hierarchical logger creation and ensures parent loggers exist.
+  static Logger _getLogger(String name, {Level? level}) {
+    if (_loggers.containsKey(name)) {
+      return _loggers[name]!;
+    }
+
+    // Create parent loggers if they don't exist
+    final parts = name.split('.');
+    Logger? parentLogger = Logger.root; // Default parent is root
+
+    for (var i = 0; i < parts.length - 1; i++) {
+      final parentName = parts.sublist(0, i + 1).join('.');
+      parentLogger = _loggers.putIfAbsent(
+        parentName,
+        () => Logger._named(parentName, parent: parentLogger),
+      );
+    }
+
+    final logger = Logger._named(name, parent: parentLogger, level: level);
+    _loggers[name] = logger;
+
+    // Register this logger as a child of its parent
+    parentLogger?._children.add(logger);
+
+    return logger;
+  }
 
   /// Enables centralized batching for driver dispatch using LogSink.
   /// Returns this logger for chaining.
@@ -164,25 +252,6 @@ class Logger extends AbstractLogger {
   /// Alias for disableDriverBatching to match docs ergonomics.
   Future<Logger> unbatched() => disableDriverBatching();
 
-  /// Creates a new logger with default settings.
-  ///
-  /// This is a convenience constructor that internally uses [create].
-  /// For more control over the logger configuration, use [create] directly.
-  factory Logger({
-    String? environment,
-    LogMessageFormatter? formatter,
-    FormatterSettings? formatterSettings,
-    bool defaultChannelEnabled = true,
-  }) => Logger._(
-    environment: environment,
-    formatter: formatter,
-    formatterSettings: formatterSettings,
-    defaultChannelEnabled: defaultChannelEnabled,
-    useIsolate: false,
-    useIsolateSink: false,
-    sinkConfig: null,
-  );
-
   /// Sets the minimum log level. Messages below this level will be ignored.
   ///
   /// Example:
@@ -191,6 +260,7 @@ class Logger extends AbstractLogger {
   /// ```
   void setLevel(Level level) {
     _minimumLevel = level;
+    _levelSet = true;
   }
 
   /// Gets the current minimum log level.
@@ -209,6 +279,7 @@ class Logger extends AbstractLogger {
   ///
   /// Parameters:
   /// * [config] - Optional logging configuration
+  /// * [level] - Minimum log level (default: debug)
   /// * [environment] - Operating environment (default: "production")
   /// * [formatter] - Message formatter (default: PlainTextLogFormatter)
   /// * [formatterSettings] - Settings for the formatter
@@ -220,6 +291,7 @@ class Logger extends AbstractLogger {
   /// Example:
   /// ```dart
   /// final logger = await Logger.create(
+  ///   level: Level.info,
   ///   environment: 'development',
   ///   formatter: JsonLogFormatter(),
   ///   defaultChannelEnabled: true,
@@ -233,6 +305,7 @@ class Logger extends AbstractLogger {
   /// ```
   static Future<Logger> create({
     LogConfig? config,
+    Level? level,
     String? environment,
     LogMessageFormatter? formatter,
     FormatterSettings? formatterSettings,
@@ -242,6 +315,9 @@ class Logger extends AbstractLogger {
     LogSinkConfig? sinkConfig,
   }) async {
     final logger = Logger._(
+      name: '',
+      parent: null,
+      level: level,
       environment: environment,
       formatter: formatter,
       formatterSettings: formatterSettings,
@@ -271,6 +347,9 @@ class Logger extends AbstractLogger {
   }
 
   Logger._({
+    required this.name,
+    required this.parent,
+    Level? level,
     String? environment,
     LogMessageFormatter? formatter,
     FormatterSettings? formatterSettings,
@@ -281,9 +360,72 @@ class Logger extends AbstractLogger {
   }) : _formatter = formatter ?? PlainTextLogFormatter(),
        _environment = environment ?? "production",
        _useIsolateSink = useIsolateSink,
-       _sinkConfig = sinkConfig {
+       _sinkConfig = sinkConfig,
+       _levelSet = level != null {
+    if (level != null) {
+      _minimumLevel = level;
+    }
     _registerDefaultDrivers();
     _registerBuiltInFormatters();
+  }
+
+  /// Creates a named logger with hierarchical parenting.
+  factory Logger._named(String name, {Logger? parent, Level? level}) {
+    final logger = Logger._(
+      name: name,
+      parent: parent,
+      level: level,
+      environment: null,
+      formatter: null,
+      formatterSettings: null,
+      defaultChannelEnabled: true,
+      useIsolate: false,
+      useIsolateSink: false,
+      sinkConfig: null,
+    );
+
+    // Inherit configuration from parent
+    if (parent != null) {
+      logger._inheritFromParent();
+    }
+
+    return logger;
+  }
+
+  /// Inherits configuration from parent logger.
+  void _inheritFromParent() {
+    if (parent == null) return;
+
+    // Inherit level if not explicitly set
+    if (!_levelSet) {
+      _minimumLevel = parent!._minimumLevel;
+    }
+
+    // Inherit formatter if not explicitly set
+    if (_formatter is PlainTextLogFormatter &&
+        parent!._formatter is! PlainTextLogFormatter) {
+      _formatter = parent!._formatter;
+    }
+
+    // Inherit channels from parent
+    for (final channel in parent!._channels) {
+      if (!_channels.any((c) => c.name == channel.name)) {
+        _channels.add(channel);
+      }
+    }
+
+    // Inherit type formatters
+    parent!._typeFormatters.forEach((type, formatter) {
+      if (!_typeFormatters.containsKey(type)) {
+        _typeFormatters[type] = formatter;
+      }
+    });
+
+    // Inherit context middlewares
+    _contextMiddlewares.addAll(parent!._contextMiddlewares);
+
+    // Inherit shared context
+    _sharedContext.addAll(parent!._sharedContext.all());
   }
 
   Future<void> _initialize() async {
@@ -613,7 +755,8 @@ class Logger extends AbstractLogger {
   ///
   @override
   void log(Level level, dynamic message, [Context? context]) {
-    if (level < _minimumLevel) {
+    // Check if this logger should log based on its own level or parent's level
+    if (level < _effectiveLevel) {
       return;
     }
 
@@ -621,6 +764,8 @@ class Logger extends AbstractLogger {
     final combinedContext = Context();
     combinedContext.addAll(_sharedContext.all());
     combinedContext.addAll(context.all());
+    // Add logger name to context
+    combinedContext.addAll({'logger': name.isEmpty ? 'root' : name});
 
     for (var middleware in _contextMiddlewares) {
       combinedContext.addAll(middleware());
@@ -635,11 +780,11 @@ class Logger extends AbstractLogger {
     );
 
     final selectedChannels =
-        _targetChannels ?? _channels.map((c) => c.name).toSet();
+        _targetChannels ?? _allChannels.map((c) => c.name).toSet();
     final uniqueDrivers = <String, Channel<LogDriver>>{};
 
     for (final channel in selectedChannels) {
-      final channelObj = _channels.firstWhere(
+      final channelObj = _allChannels.firstWhere(
         (c) => c.name == channel,
         orElse: () => Channel(name: channel, driver: ConsoleLogDriver()),
       );
@@ -676,8 +821,6 @@ class Logger extends AbstractLogger {
       final channelName = entry.key;
       final driver = entry.value.driver;
 
-      // Middleware maps removed in v2; pipeline centralized in Logger
-
       String formattedMessage = _formatRecord(record, channelName);
 
       final typeMws =
@@ -688,7 +831,7 @@ class Logger extends AbstractLogger {
       processDriverMiddlewares(
         entry: LogEntry(record, formattedMessage),
         globalMiddlewares: _globalMiddlewares,
-        channelMiddlewares: _channels
+        channelMiddlewares: _allChannels
             .firstWhere(
               (c) => c.name == channelName,
               orElse: () =>
@@ -709,6 +852,68 @@ class Logger extends AbstractLogger {
       });
     }
     _targetChannels = null;
+  }
+
+  /// Gets the effective log level, considering parent hierarchy.
+  Level get _effectiveLevel {
+    if (_minimumLevel != Level.debug) {
+      return _minimumLevel;
+    }
+    return parent?._effectiveLevel ?? Level.debug;
+  }
+
+  /// Gets all channels, including inherited ones from parent.
+  List<Channel<LogDriver>> get _allChannels {
+    final channels = <String, Channel<LogDriver>>{};
+
+    // Add parent's channels first
+    if (parent != null) {
+      for (final channel in parent!._allChannels) {
+        channels[channel.name] = channel;
+      }
+    }
+
+    // Override with own channels
+    for (final channel in _channels) {
+      channels[channel.name] = channel;
+    }
+
+    return channels.values.toList();
+  }
+
+  /// Gets all channels (for testing).
+  @visibleForTesting
+  List<Channel<LogDriver>> get allChannels => _allChannels;
+
+  /// Gets the formatter (for testing).
+  @visibleForTesting
+  LogMessageFormatter get currentFormatter => _formatter;
+
+  /// Gets all type formatters (for testing).
+  @visibleForTesting
+  Map<Type, LogTypeFormatter> get allTypeFormatters => _allTypeFormatters;
+
+  /// Gets the shared context (for testing).
+  @visibleForTesting
+  Context get sharedContext => _sharedContext;
+
+  /// Gets the children (for testing).
+  @visibleForTesting
+  List<Logger> get children => _children;
+
+  /// Gets all type formatters, including inherited ones.
+  Map<Type, LogTypeFormatter> get _allTypeFormatters {
+    final formatters = <Type, LogTypeFormatter>{};
+
+    // Add parent's formatters first
+    if (parent != null) {
+      formatters.addAll(parent!._allTypeFormatters);
+    }
+
+    // Override with own formatters
+    formatters.addAll(_typeFormatters);
+
+    return formatters;
   }
 
   // Type-based selection using registry
@@ -751,12 +956,12 @@ class Logger extends AbstractLogger {
   ///
   /// Returns the formatted message string.
   String _formatRecord(LogRecord record, String channelName) {
-    final channel = _channels.firstWhere(
+    final channel = _allChannels.firstWhere(
       (c) => c.name == channelName,
       orElse: () => Channel(name: channelName, driver: ConsoleLogDriver()),
     );
     final formatter = channel.formatter ?? _formatter;
-    final typeFormatter = _typeFormatters[record.message.runtimeType];
+    final typeFormatter = _allTypeFormatters[record.message.runtimeType];
 
     if (typeFormatter != null) {
       return typeFormatter.format(record.level, record.message, record.context);
