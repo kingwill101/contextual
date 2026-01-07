@@ -3,7 +3,7 @@ description: >
   A structured logging library for Dart with support for multiple output channels,
   customizable formatting, context management, and middleware processing.
 
-version: 2.0.0
+version: 2.1.0
 repository: https://github.com/kingwill101/contextual
 topics:
   - logging

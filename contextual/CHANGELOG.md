@@ -1,3 +1,16 @@
+## [2.1.0] - 2026-01-07
+
+### Added
+- **Hierarchical Named Loggers**: Support for creating loggers with names (e.g., `app.database`) that inherit levels, channels, formatters, and context from their parents.
+- **Context Integration**: Automatically includes the logger's name in the log context as `logger: 'name'`.
+- **LoggerManager**: A new utility class in `example/` for managing logger resources, subscriptions, and proper shutdown.
+- **Public API**: Exposed `Logger.root` and added `Logger(name: ...)` factory for easy named logger creation.
+- **Documentation**: Extensive updates to `README.md` and inline Dartdoc for better API discovery.
+
+### Improved
+- **Type-Safe Channel Selection**: Added `forDriver<T>()` and `forDrivers()` methods for selecting channels by their driver type.
+- **Channel Management**: Enhanced `hasChannel`, `getChannel`, and `removeChannel` with better documentation.
+
 ## [2.0.0] - 2025-02-16
 
 ### Breaking Changes
