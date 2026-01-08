@@ -31,7 +31,8 @@ class LoggerManager {
   bool _disposed = false;
 
   /// Gets or creates a named logger with optional configuration.
-  Logger getLogger(String name, {
+  Logger getLogger(
+    String name, {
     Level? level,
     LogMessageFormatter? formatter,
     bool addConsoleChannel = true,
@@ -91,7 +92,7 @@ class LoggerManager {
 
   /// Gets all active subscriptions.
   List<StreamSubscription<LogEntry>> get subscriptions =>
-    List.unmodifiable(_subscriptions);
+      List.unmodifiable(_subscriptions);
 
   /// Cancels all subscriptions and shuts down all managed loggers.
   ///
