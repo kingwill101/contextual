@@ -1,0 +1,25 @@
+[2025-10-20 02:21:59.873] [WARNING] Database connection pool low | Context: {logger: app.database}
+[2025-10-20 02:21:59.874] [ERROR] Failed to execute query | Context: {query: SELECT * FROM users, error: timeout, logger: app.database}
+[2025-10-20 02:21:59.877] [WARNING] Cache miss rate high | Context: {logger: app.database.cache}
+[2025-10-20 02:21:59.879] [INFO] Redis connection established | Context: {logger: app.database.cache.redis}
+[2025-10-20 02:21:59.887] [WARNING] Slow query detected | Context: {logger: app.database}
+[2025-10-20 02:35:01.806] [WARNING] Database connection pool low | Context: {logger: app.database}
+[2025-10-20 02:35:01.807] [ERROR] Failed to execute query | Context: {query: SELECT * FROM users, error: timeout, logger: app.database}
+[2025-10-20 02:35:01.810] [WARNING] Cache miss rate high | Context: {logger: app.database.cache}
+[2025-10-20 02:35:01.812] [INFO] Redis connection established | Context: {logger: app.database.cache.redis}
+[2025-10-20 02:35:01.817] [WARNING] Slow query detected | Context: {logger: app.database}
+[2025-10-20 02:39:14.352] [WARNING] Database connection pool low | Context: {logger: app.database}
+[2025-10-20 02:39:14.353] [ERROR] Failed to execute query | Context: {query: SELECT * FROM users, error: timeout, logger: app.database}
+[2025-10-20 02:39:14.355] [WARNING] Cache miss rate high | Context: {logger: app.database.cache}
+[2025-10-20 02:39:14.356] [INFO] Redis connection established | Context: {logger: app.database.cache.redis}
+[2025-10-20 02:39:14.362] [WARNING] Slow query detected | Context: {logger: app.database}
+[2025-10-20 02:39:42.866] [WARNING] Database connection pool low | Context: {logger: app.database}
+[2025-10-20 02:39:42.868] [ERROR] Failed to execute query | Context: {query: SELECT * FROM users, error: timeout, logger: app.database}
+[2025-10-20 02:39:42.870] [WARNING] Cache miss rate high | Context: {logger: app.database.cache}
+[2025-10-20 02:39:42.872] [INFO] Redis connection established | Context: {logger: app.database.cache.redis}
+[2025-10-20 02:39:42.880] [WARNING] Slow query detected | Context: {logger: app.database}
+[2025-10-20 02:40:42.249] [WARNING] Database connection pool low | Context: {logger: app.database}
+[2025-10-20 02:40:42.250] [ERROR] Failed to execute query | Context: {query: SELECT * FROM users, error: timeout, logger: app.database}
+[2025-10-20 02:40:42.252] [WARNING] Cache miss rate high | Context: {logger: app.database.cache}
+[2025-10-20 02:40:42.253] [INFO] Redis connection established | Context: {logger: app.database.cache.redis}
+[2025-10-20 02:40:42.254] [WARNING] Slow query detected | Context: {logger: app.database}
