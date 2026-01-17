@@ -69,14 +69,14 @@ class ExceptionLogFormatter extends LogTypeFormatter<Exception> {
       'level=${level.name}',
       'msg="${exception.toString().replaceAll('"', '\\"')}"',
     ];
-    
+
     // Add context data
     final contextData = context.all();
     for (final entry in contextData.entries) {
       final value = entry.value.toString().replaceAll('"', '\\"');
       parts.add('${entry.key}="$value"');
     }
-    
+
     return parts.join(' ');
   }
 }
