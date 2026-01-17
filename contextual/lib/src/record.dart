@@ -19,6 +19,9 @@ class LogRecord {
   /// The program counter or stack trace at the time the record was constructed.
   final StackTrace? stackTrace;
 
+  /// Whether the stack trace was explicitly provided by the caller.
+  final bool stackTraceProvided;
+
   /// Creates a new [LogRecord] instance with the given parameters.
   LogRecord({
     required this.time,
@@ -26,6 +29,7 @@ class LogRecord {
     required this.message,
     Context? context,
     this.stackTrace,
+    this.stackTraceProvided = false,
   }) : context = context ?? Context();
 
   /// Returns a copy of the record with no shared state.
@@ -36,17 +40,24 @@ class LogRecord {
       message: message,
       context: Context.from(context.all()),
       stackTrace: stackTrace,
+      stackTraceProvided: stackTraceProvided,
     );
   }
 
   /// Converts the log record to a JSON-compatible map.
+  /// Only includes stackTrace if it was explicitly provided by the caller.
   Map<String, dynamic> toJson() {
-    return {
+    final map = {
       'time': time.toIso8601String(),
       'level': level.name,
       'message': message,
       'context': context.all(),
-      'stackTrace': stackTrace?.toString(),
     };
+
+    if (stackTraceProvided && stackTrace != null) {
+      map['stackTrace'] = stackTrace.toString();
+    }
+
+    return map;
   }
 }

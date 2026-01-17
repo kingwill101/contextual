@@ -1,30 +1,31 @@
-import '../record.dart';
 import '../context.dart';
-import 'message_formatter.dart';
+import '../record.dart';
 import '../util.dart';
+import 'message_formatter.dart';
+import 'logfmt.dart';
 
-/// A formatter that outputs log messages in a simple, unformatted text format.
+/// A formatter that outputs log messages in logfmt-style key/value pairs.
 ///
-/// This formatter produces plain text output without any special formatting or
-/// colors, making it suitable for file logging or environments where ANSI
-/// colors aren't supported.
+/// This formatter produces human-readable structured logs that are easy to
+/// parse by log aggregation tools. It avoids ANSI colors and keeps output
+/// on a single line, making it suitable for file logging and production use.
 ///
 /// The output format is:
 /// ```
-/// [2024-02-15 10:30:45.123] [INFO] [prefix] Message | Context: {key: value}
+/// time="2024-02-15T10:30:45.123-05:00" level=info msg="Message" key=value
 /// ```
 ///
 /// Components (all optional based on settings):
-/// * Timestamp in brackets
-/// * Log level in brackets
-/// * Prefix in brackets (if present in context)
-/// * Message text
-/// * Context data after a pipe symbol (if present)
+/// * `time` - Timestamp (settings.timestampFormat)
+/// * `level` - Lowercase log level
+/// * `prefix` - Optional prefix (if present in context)
+/// * `msg` - Log message text
+/// * Additional context key/value pairs
 ///
 /// Example outputs:
 /// ```
-/// [2024-02-15 10:30:45.123] [INFO] User logged in
-/// [2024-02-15 10:30:45.123] [ERROR] [auth] Login failed | Context: {attempts: 3}
+/// time="2024-02-15T10:30:45.123-05:00" level=info msg="User logged in"
+/// time="2024-02-15T10:30:45.123-05:00" level=error msg="Login failed" prefix=auth attempts=3
 /// ```
 ///
 /// This formatter is ideal for:
@@ -50,27 +51,42 @@ class PlainTextLogFormatter extends LogMessageFormatter {
       Context.from(contextData),
     );
 
-    StringBuffer buffer = StringBuffer();
+    final parts = <String>[];
 
     if (settings.includeTimestamp) {
-      final timestamp = settings.timestampFormat.format(record.time);
-      buffer.write('[$timestamp] ');
+      final timestamp = settings.formatTimestamp(record.time);
+      parts.add('time=${formatLogfmtValue(timestamp)}');
     }
 
     if (settings.includeLevel) {
-      buffer.write('[${record.level}] ');
+      parts.add('level=${formatLogfmtValue(record.level.name)}');
     }
 
     if (settings.includePrefix && record.context.has('prefix')) {
-      buffer.write('[${record.context.get('prefix')}] ');
+      parts.add('prefix=${formatLogfmtValue(record.context.get('prefix'))}');
     }
 
-    buffer.write(formattedMessage);
+    parts.add('msg=${formatLogfmtValue(formattedMessage)}');
 
     if (settings.includeContext && contextData.isNotEmpty) {
-      buffer.write(' | Context: ${contextData.toString()}');
+      final contextEntries = Map<String, dynamic>.from(contextData);
+      if (settings.includePrefix) {
+        contextEntries.remove('prefix');
+      }
+      final flattened = flattenLogfmtContext(contextEntries);
+      for (final entry in flattened.entries) {
+        parts.add(
+          '${formatLogfmtKey(entry.key)}=${formatLogfmtValue(entry.value)}',
+        );
+      }
     }
 
-    return buffer.toString();
+    if (record.stackTraceProvided && record.stackTrace != null) {
+      parts.add(
+        'stackTrace=${formatLogfmtValue(record.stackTrace.toString())}',
+      );
+    }
+
+    return parts.join(' ');
   }
 }

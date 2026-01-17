@@ -29,8 +29,10 @@ class FormatterSettings {
   final bool includeHidden;
 
   /// The format to use for timestamps.
-  /// Defaults to 'yyyy-MM-dd HH:mm:ss.SSS'.
+  /// Defaults to RFC 3339 with offset (e.g. 2026-01-16T11:02:30.151-05:00).
   final DateFormat timestampFormat;
+
+  final bool _useDefaultTimestampFormat;
 
   /// Creates a new [FormatterSettings] instance with the specified configuration.
   ///
@@ -43,6 +45,28 @@ class FormatterSettings {
     this.includeContext = true,
     this.includeHidden = false,
     DateFormat? timestampFormat,
-  }) : timestampFormat =
-           timestampFormat ?? DateFormat('yyyy-MM-dd HH:mm:ss.SSS');
+  }) : _useDefaultTimestampFormat = timestampFormat == null,
+       timestampFormat =
+           timestampFormat ?? DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+  /// Formats the given [time] using the configured timestamp format.
+  ///
+  /// If no custom [timestampFormat] was provided, this returns an RFC 3339
+  /// timestamp with offset (e.g. 2026-01-16T11:02:30.151-05:00).
+  String formatTimestamp(DateTime time) {
+    if (_useDefaultTimestampFormat) {
+      return _formatRfc3339(time);
+    }
+    return timestampFormat.format(time);
+  }
+
+  static String _formatRfc3339(DateTime time) {
+    final base = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format(time);
+    final offset = time.timeZoneOffset;
+    final totalMinutes = offset.inMinutes.abs();
+    final hours = (totalMinutes ~/ 60).toString().padLeft(2, '0');
+    final minutes = (totalMinutes % 60).toString().padLeft(2, '0');
+    final sign = offset.inMinutes < 0 ? '-' : '+';
+    return '$base$sign$hours:$minutes';
+  }
 }

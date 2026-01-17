@@ -24,13 +24,13 @@ void main() async {
 
   // Simulate normal operation with some warnings
   for (var i = 0; i < 5; i++) {
-    logger.info('Processing batch $i', Context({'batch_id': i, 'items': 100}));
+    logger.info('Processing batch $i', {'batch_id': i, 'items': 100});
 
     if (i % 2 == 0) {
-      logger.warning(
-        'Slow processing detected',
-        Context({'batch_id': i, 'duration_ms': 1500 + i * 100}),
-      );
+      logger.warning('Slow processing detected', {
+        'batch_id': i,
+        'duration_ms': 1500 + i * 100,
+      });
     }
   }
 
@@ -39,14 +39,11 @@ void main() async {
     throw Exception('Database connection lost');
   } catch (e, stack) {
     // This will be logged to both console and file
-    logger.error(
-      'Critical error occurred',
-      Context({
-        'error': e.toString(),
-        'stack': stack.toString(),
-        'component': 'database',
-      }),
-    );
+    logger.error('Critical error occurred', {
+      'error': e.toString(),
+      'stack': stack.toString(),
+      'component': 'database',
+    });
   }
 
   // Continue with more logs
@@ -58,10 +55,10 @@ void main() async {
     throw StateError('Invalid application state');
   } catch (e, stack) {
     // Log the error to both drivers
-    logger.critical(
-      'Application state error',
-      Context({'error': e.toString(), 'stack': stack.toString()}),
-    );
+    logger.critical('Application state error', {
+      'error': e.toString(),
+      'stack': stack.toString(),
+    });
   }
 
   // Example of using multiple stack drivers
@@ -81,16 +78,16 @@ void main() async {
     );
 
   // Log to production stack
-  multiLogger['production'].info(
-    'Production system healthy',
-    Context({'uptime': '5d 12h', 'memory': '2.5GB'}),
-  );
+  multiLogger['production'].info('Production system healthy', {
+    'uptime': '5d 12h',
+    'memory': '2.5GB',
+  });
 
   // Log to monitoring stack
-  multiLogger['monitoring'].alert(
-    'High memory usage detected',
-    Context({'memory_used': '7.5GB', 'threshold': '7GB'}),
-  );
+  multiLogger['monitoring'].alert('High memory usage detected', {
+    'memory_used': '7.5GB',
+    'threshold': '7GB',
+  });
 
   // Cleanup
   await logger.shutdown();

@@ -3,6 +3,7 @@ import 'package:contextual/src/log_level.dart';
 import 'package:contextual/src/record.dart';
 import 'package:contextual/src/util.dart';
 
+import 'logfmt.dart';
 import 'message_formatter.dart';
 
 /// A formatter that outputs log messages with ANSI colors for terminal display.
@@ -18,17 +19,18 @@ import 'message_formatter.dart';
 /// * ERROR - Red
 /// * ALERT/EMERGENCY - Bold Red
 ///
-/// The output format is:
+/// The output format is logfmt-style key/value pairs with colors:
 /// ```
-/// [2024-02-15 10:30:45.123] [INFO] [prefix] Message | Context: {key: value}
+/// time="2024-02-15T10:30:45.123-05:00" level=info msg="Message" key=value
 /// ```
 ///
 /// Components:
+/// * Keys - Gray
 /// * Timestamp - Gray
 /// * Log Level - Level-specific color
 /// * Prefix - Cyan (if present)
 /// * Message - Default terminal color
-/// * Context - Magenta (if present)
+/// * Context Keys - Magenta (if present)
 ///
 /// Note: This formatter requires a terminal that supports ANSI color codes.
 /// Colors may not display correctly in all environments.
@@ -67,44 +69,60 @@ class PrettyLogFormatter extends LogMessageFormatter {
         levelPen = AnsiPen()..white();
     }
 
-    StringBuffer buffer = StringBuffer();
+    final parts = <String>[];
+    final keyPen = AnsiPen()..gray();
 
     // Add timestamp in gray
     if (settings.includeTimestamp) {
-      final now = DateTime.now();
-      final timestamp = settings.timestampFormat.format(now);
-      buffer.write((AnsiPen()..gray())('[$timestamp] '));
+      final timestamp = settings.formatTimestamp(record.time);
+      parts.add(
+        '${keyPen('time')}=${(AnsiPen()..gray())(formatLogfmtValue(timestamp))}',
+      );
     }
 
     // Add log level in level-specific color
     if (settings.includeLevel) {
-      buffer.write(levelPen('[${record.level}] '));
+      parts.add(
+        '${keyPen('level')}=${levelPen(formatLogfmtValue(record.level.name))}',
+      );
     }
 
     // Add prefix in cyan if present
     if (settings.includePrefix && record.context.has('prefix')) {
       final prefix = record.context.get('prefix');
-      buffer.write((AnsiPen()..cyan())('[$prefix] '));
+      final prefixPen = AnsiPen()..cyan();
+      parts.add('${keyPen('prefix')}=${prefixPen(formatLogfmtValue(prefix))}');
     }
 
     // Add the main message
     final formattedMessage = interpolateMessage(record.message, record.context);
-    buffer.write(formattedMessage);
+    parts.add('${keyPen('msg')}=${formatLogfmtValue(formattedMessage)}');
 
     // Add context data in magenta if present
     final contextData = settings.includeHidden
         ? record.context.all()
         : record.context.visible();
     if (settings.includeContext && contextData.isNotEmpty) {
-      buffer.write(' ');
-      buffer.write((AnsiPen()..magenta())('| Context: '));
-      final magentaPen = AnsiPen()..magenta();
-      final entries = contextData.entries
-          .map((entry) => '${magentaPen(entry.key)}: ${entry.value}')
-          .join(', ');
-      buffer.write('{$entries}');
+      final contextEntries = Map<String, dynamic>.from(contextData);
+      if (settings.includePrefix) {
+        contextEntries.remove('prefix');
+      }
+      final flattened = flattenLogfmtContext(contextEntries);
+      final contextKeyPen = AnsiPen()..magenta();
+      for (final entry in flattened.entries) {
+        parts.add(
+          '${contextKeyPen(formatLogfmtKey(entry.key))}=${formatLogfmtValue(entry.value)}',
+        );
+      }
     }
 
-    return buffer.toString();
+    if (record.stackTraceProvided && record.stackTrace != null) {
+      final tracePen = AnsiPen()..red();
+      parts.add(
+        '${keyPen('stackTrace')}=${tracePen(formatLogfmtValue(record.stackTrace.toString()))}',
+      );
+    }
+
+    return parts.join(' ');
   }
 }

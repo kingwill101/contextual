@@ -51,7 +51,7 @@ class JsonLogFormatter extends LogMessageFormatter {
     final logEntry = <String, dynamic>{};
 
     if (settings.includeTimestamp) {
-      logEntry['timestamp'] = settings.timestampFormat.format(DateTime.now());
+      logEntry['timestamp'] = settings.formatTimestamp(DateTime.now());
     }
 
     if (settings.includeLevel) {

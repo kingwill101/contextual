@@ -110,10 +110,11 @@ void main() async {
     ..addChannel('console', ConsoleLogDriver());
 
   // Log with XML formatting
-  xmlLogger.info(
-    'User login successful',
-    Context({'userId': '12345', 'role': 'admin', 'ip': '192.168.1.1'}),
-  );
+  xmlLogger.info('User login successful', {
+    'userId': '12345',
+    'role': 'admin',
+    'ip': '192.168.1.1',
+  });
 
   // Create logger with CSV formatter
   final csvLogger = Logger(
@@ -124,40 +125,31 @@ void main() async {
   )..addChannel('file', DailyFileLogDriver('logs/audit.log'));
 
   // Log with CSV formatting
-  csvLogger.info(
-    'Configuration changed',
-    Context({
-      'component': 'database',
-      'setting': 'max_connections',
-      'old_value': 100,
-      'new_value': 200,
-    }),
-  );
+  csvLogger.info('Configuration changed', {
+    'component': 'database',
+    'setting': 'max_connections',
+    'old_value': 100,
+    'new_value': 200,
+  });
 
   // Create logger with metrics formatter
   final metricsLogger = Logger(formatter: MetricsLogFormatter())
     ..addChannel('statsd', ConsoleLogDriver());
 
   // Log metrics
-  metricsLogger.info(
-    'System metrics',
-    Context({
-      'metric': 'system.cpu.usage',
-      'value': 45.2,
-      'host': 'web-01',
-      'datacenter': 'us-east',
-    }),
-  );
+  metricsLogger.info('System metrics', {
+    'metric': 'system.cpu.usage',
+    'value': 45.2,
+    'host': 'web-01',
+    'datacenter': 'us-east',
+  });
 
-  metricsLogger.info(
-    'Application metrics',
-    Context({
-      'metric': 'app.requests.total',
-      'value': 1234,
-      'endpoint': '/api/users',
-      'method': 'GET',
-    }),
-  );
+  metricsLogger.info('Application metrics', {
+    'metric': 'app.requests.total',
+    'value': 1234,
+    'endpoint': '/api/users',
+    'method': 'GET',
+  });
 
   // Multiple formatters example
   final multiLogger = Logger()
@@ -174,15 +166,12 @@ void main() async {
     );
 
   // Log to all channels - each using its own formatter
-  multiLogger.info(
-    'System status update',
-    Context({
-      'metric': 'system.status',
-      'value': 1,
-      'status': 'healthy',
-      'uptime': '5d 12h',
-    }),
-  );
+  multiLogger.info('System status update', {
+    'metric': 'system.status',
+    'value': 1,
+    'status': 'healthy',
+    'uptime': '5d 12h',
+  });
 
   // Cleanup
   await xmlLogger.shutdown();

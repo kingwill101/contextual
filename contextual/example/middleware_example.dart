@@ -183,28 +183,22 @@ void main() async {
     );
 
   // Regular log - will include request ID and performance metrics
-  logger.info('Application started', Context({'operation': 'startup'}));
+  logger.info('Application started', {'operation': 'startup'});
 
   // Log with sensitive data - will be masked
-  logger.info(
-    'User credentials updated',
-    Context({
-      'user': 'john_doe',
-      'password': 'secret123',
-      'api_key': 'abcd1234',
-    }),
-  );
+  logger.info('User credentials updated', {
+    'user': 'john_doe',
+    'password': 'secret123',
+    'api_key': 'abcd1234',
+  });
 
   // Simulate some operations
   for (var i = 0; i < 5; i++) {
-    logger.info(
-      'Processing request',
-      Context({
-        'operation': 'api_call',
-        'endpoint': '/api/users',
-        'method': 'GET',
-      }),
-    );
+    logger.info('Processing request', {
+      'operation': 'api_call',
+      'endpoint': '/api/users',
+      'method': 'GET',
+    });
     await Future.delayed(Duration(seconds: 1));
   }
 
@@ -212,27 +206,21 @@ void main() async {
   try {
     throw Exception('Database connection failed');
   } catch (e, stack) {
-    logger.error(
-      'Failed to connect to database',
-      Context({
-        'error': e.toString(),
-        'stack': stack.toString(),
-        'database': 'users',
-        'operation': 'db_connect',
-      }),
-    );
+    logger.error('Failed to connect to database', {
+      'error': e.toString(),
+      'stack': stack.toString(),
+      'database': 'users',
+      'operation': 'db_connect',
+    });
   }
 
   // Log security event
-  logger.critical(
-    'Security breach detected',
-    Context({
-      'source_ip': '192.168.1.100',
-      'target': '/admin',
-      'user_agent': 'suspicious-bot/1.0',
-      'operation': 'security_alert',
-    }),
-  );
+  logger.critical('Security breach detected', {
+    'source_ip': '192.168.1.100',
+    'target': '/admin',
+    'user_agent': 'suspicious-bot/1.0',
+    'operation': 'security_alert',
+  });
 
   await logger.shutdown();
 }

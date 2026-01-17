@@ -48,10 +48,10 @@ void main() async {
     // Today's logs with various levels
     logger.debug('Debug message for troubleshooting');
     logger.warning('System resources running low');
-    logger.error(
-      'Failed to process request',
-      Context({'request_id': '123', 'endpoint': '/api/users'}),
-    );
+    logger.error('Failed to process request', {
+      'request_id': '123',
+      'endpoint': '/api/users',
+    });
 
     // Log structured data
     logger.info({

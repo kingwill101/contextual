@@ -624,12 +624,16 @@ class Logger extends AbstractLogger {
     LogMessageFormatter? formatter,
     List<DriverMiddleware>? middlewares,
   }) {
+    var resolvedFormatter = formatter;
+    if (resolvedFormatter == null && driver is DailyFileLogDriver) {
+      resolvedFormatter = PlainTextLogFormatter(settings: _formatter.settings);
+    }
     _channels.removeWhere((c) => c.name == channelName);
     _channels.add(
       Channel<LogDriver>(
         name: channelName,
         driver: driver,
-        formatter: formatter,
+        formatter: resolvedFormatter,
         middlewares: middlewares ?? const [],
       ),
     );
@@ -748,25 +752,35 @@ class Logger extends AbstractLogger {
   /// - [level]: The log level (e.g., "info", "error", "debug")
   /// - [message]: The message or object to log
   /// - [context]: Optional additional context data specific to this log entry
+  ///   (Context, Map, or any object; non-map values are stored under `context`)
+  /// - [stackTrace]: Optional stack trace to associate with this log entry
   ///
   /// Throws ArgumentError if the log level is invalid.
   ///
   /// Example:
   ///
-  /// await logger.log('error', 'Database connection failed',
-  ///   Context({'attempt': 3, 'database': 'users'}));
+  /// await logger.log(
+  ///   Level.error,
+  ///   'Database connection failed',
+  ///   {'attempt': 3, 'database': 'users'},
+  /// );
   ///
   @override
-  void log(Level level, dynamic message, [Context? context]) {
+  void log(
+    Level level,
+    dynamic message, [
+    Object? context,
+    StackTrace? stackTrace,
+  ]) {
     // Check if this logger should log based on its own level or parent's level
     if (level < _effectiveLevel) {
       return;
     }
 
-    context ??= Context();
+    final resolvedContext = _resolveContext(context);
     final combinedContext = Context();
     combinedContext.addAll(_sharedContext.all());
-    combinedContext.addAll(context.all());
+    combinedContext.addAll(resolvedContext.all());
     // Add logger name to context
     combinedContext.addAll({'logger': name.isEmpty ? 'root' : name});
 
@@ -779,7 +793,8 @@ class Logger extends AbstractLogger {
       level: level,
       message: message.toString(),
       context: combinedContext,
-      stackTrace: StackTrace.current,
+      stackTrace: stackTrace ?? StackTrace.current,
+      stackTraceProvided: stackTrace != null,
     );
 
     final selectedChannels =
@@ -855,6 +870,35 @@ class Logger extends AbstractLogger {
       });
     }
     _targetChannels = null;
+  }
+
+  /// Normalizes the optional [context] argument into a [Context] instance.
+  ///
+  /// The supported inputs are:
+  /// - `null`: returns an empty [Context].
+  /// - [Context]: returns the instance unchanged.
+  /// - `Map<String, dynamic>`: passed directly to [Context.from].
+  /// - generic [Map]: keys are converted to strings and values kept as-is
+  ///   before being passed to [Context.from].
+  /// - any other object: wrapped in a [Context] under the `'context'` key.
+  Context _resolveContext(Object? context) {
+    if (context == null) {
+      return Context();
+    }
+    if (context is Context) {
+      return context;
+    }
+    if (context is Map<String, dynamic>) {
+      return Context.from(context);
+    }
+    if (context is Map) {
+      final mapped = <String, dynamic>{};
+      context.forEach((key, value) {
+        mapped[key.toString()] = value;
+      });
+      return Context.from(mapped);
+    }
+    return Context.from({'context': context});
   }
 
   /// Gets the effective log level, considering parent hierarchy.

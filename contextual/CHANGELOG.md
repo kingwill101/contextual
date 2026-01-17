@@ -1,3 +1,17 @@
+## [2.2.0] - 2026-01-16
+
+### Added
+- **Flexible per-log context**: Logging methods now accept any object; maps are treated as structured context and non-map values are stored under `context`.
+- **Stack trace support**: Optional stack traces can be provided to log calls and are preserved on log records.
+- **Logfmt helpers**: Shared logfmt formatting helpers for consistent key/value output and context flattening.
+- **Default file formatter**: File channels default to `PlainTextLogFormatter` unless explicitly overridden.
+
+### Changed
+- **Plain formatter output**: `PlainTextLogFormatter` now emits logfmt-style key/value pairs with dotted-key flattening for nested maps.
+- **Pretty formatter output**: `PrettyLogFormatter` now emits colored logfmt-style key/value output.
+- **Timestamp default**: Formatter defaults now use RFC 3339 timestamps with timezone offset.
+- **Examples & docs**: Updated to reflect the new context API, stack trace usage, and logfmt output.
+
 ## [2.1.0] - 2026-01-07
 
 ### Added

@@ -24,28 +24,19 @@ void main() async {
   // Demonstrate sampling with multiple messages
   for (var i = 0; i < 100; i++) {
     // Debug messages - expect ~10 to be logged
-    logger.debug(
-      'Debug message $i',
-      Context({'iteration': i, 'type': 'debug_loop'}),
-    );
+    logger.debug('Debug message $i', {'iteration': i, 'type': 'debug_loop'});
 
     // Info messages - expect ~20 to be logged
-    logger.info(
-      'Info message $i',
-      Context({'iteration': i, 'type': 'info_loop'}),
-    );
+    logger.info('Info message $i', {'iteration': i, 'type': 'info_loop'});
 
     // Warning messages - expect ~50 to be logged
-    logger.warning(
-      'Warning message $i',
-      Context({'iteration': i, 'type': 'warning_loop'}),
-    );
+    logger.warning('Warning message $i', {
+      'iteration': i,
+      'type': 'warning_loop',
+    });
 
     // Error messages - all 100 will be logged
-    logger.error(
-      'Error message $i',
-      Context({'iteration': i, 'type': 'error_loop'}),
-    );
+    logger.error('Error message $i', {'iteration': i, 'type': 'error_loop'});
   }
 
   // Example with multiple sampling drivers
@@ -78,28 +69,18 @@ void main() async {
 
   // Log high-volume metrics - most will be sampled out
   for (var i = 0; i < 1000; i++) {
-    multiLogger['metrics'].debug(
-      'Metric update',
-      Context({
-        'metric': 'cpu_usage',
-        'value': 45 + (i % 10),
-        'timestamp': DateTime.now().toIso8601String(),
-      }),
-    );
+    multiLogger['metrics'].debug('Metric update', {
+      'metric': 'cpu_usage',
+      'value': 45 + (i % 10),
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   }
 
   // Critical alerts - all will be logged
-  multiLogger['alerts'].critical(
-    'System overload',
-    Context({
-      'component': 'database',
-      'metrics': {
-        'connections': 1500,
-        'query_time': 2500,
-        'memory_usage': '95%',
-      },
-    }),
-  );
+  multiLogger['alerts'].critical('System overload', {
+    'component': 'database',
+    'metrics': {'connections': 1500, 'query_time': 2500, 'memory_usage': '95%'},
+  });
 
   // Cleanup
   await logger.shutdown();

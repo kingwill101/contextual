@@ -13,7 +13,7 @@ A structured logging library for Dart
 ## Features
 
 - 🪵 **Multiple Log Levels** - From debug to emergency following RFC 5424
-- 🎨 **Flexible Formatting** - JSON, plain text, and colored output
+- 🎨 **Flexible Formatting** - JSON, logfmt-style plain text, and colored output
 - 📊 **Rich Context Support** - Add structured data to your logs
 - 🔄 **Middleware** - Transform and filter log messages
 - 📤 **Multiple Outputs** - Console, files, webhooks, and more
@@ -48,11 +48,11 @@ void main() {
   // Logging with context
   logger.warning(
     'Database connection failed',
-    Context({
+    {
       'host': 'localhost',
       'port': 5432,
       'attempts': 3
-    })
+    }
   );
 }
 
@@ -107,7 +107,9 @@ final logger = await Logger.create(config: config);
 
 ```
 
-If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` formatter. To disable the the `default` console logger, at initialization, set the `defaultChannelEnabled` value to `false` in the constructor of your `Logger` instance.
+If no configuration is provided, a default configuration will be used. The default configuration logs using the `console` driver and formats logs using the `plain` (logfmt-style) formatter. To disable the the `default` console logger, at initialization, set the `defaultChannelEnabled` value to `false` in the constructor of your `Logger` instance.
+
+File channels default to `PlainTextLogFormatter` unless a formatter is provided.
 
 ```dart
 final logger = await Logger.create(config: const LogConfig(
@@ -395,12 +397,21 @@ logger.withContext({
 // Per-log context
 logger.info(
   'User logged in',
-  Context({
+  {
     'userId': '123',
     'ipAddress': '192.168.1.1'
-  })
+  }
 );
+// Optional stack trace
+logger.error('Failed to process request', {'requestId': 'abc'}, StackTrace.current);
 ```
+
+Per-log context accepts any object. Use a `Map` for structured fields; other
+objects are stored under the `context` key.
+
+The default `plain` formatter emits logfmt-style key/value pairs. Nested maps
+are flattened using dotted keys (e.g. `user.id=123`), and a provided
+`StackTrace` is emitted as `stackTrace=...`.
 
 ## Middleware
 

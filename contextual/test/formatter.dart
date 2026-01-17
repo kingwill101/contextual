@@ -30,10 +30,9 @@ void main() {
           context: context,
         ),
       );
-      expect(formattedMessage, contains(Level.info));
-      expect(formattedMessage, contains('Test message'));
-      expect(formattedMessage, contains('Context:'));
-      expect(formattedMessage, contains('key: value'));
+      expect(formattedMessage, contains('level=info'));
+      expect(formattedMessage, contains('msg="Test message"'));
+      expect(formattedMessage, contains('key=value'));
     });
   });
 

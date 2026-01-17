@@ -44,14 +44,11 @@ void main() async {
     app.info('Loading application configuration');
     app.debug('Debug message (filtered out by level)');
     database.warning('Database connection pool running low');
-    database.error(
-      'Query execution timeout',
-      Context({
-        'query': 'SELECT * FROM users WHERE active = ?',
-        'timeout': '30s',
-        'attempts': 3,
-      }),
-    );
+    database.error('Query execution timeout', {
+      'query': 'SELECT * FROM users WHERE active = ?',
+      'timeout': '30s',
+      'attempts': 3,
+    });
     api.info('API server listening on port 8080');
     api.debug('Request processing details (filtered out)');
 

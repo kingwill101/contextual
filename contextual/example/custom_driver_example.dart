@@ -101,10 +101,7 @@ void main() async {
 
   // Log some messages to TCP
   tcpLogger.info('Connected to TCP server');
-  tcpLogger.error(
-    'Connection lost',
-    Context({'reason': 'timeout', 'attempts': 3}),
-  );
+  tcpLogger.error('Connection lost', {'reason': 'timeout', 'attempts': 3});
 
   // Create logger with custom aggregating driver
   final aggregatingLogger = Logger()
@@ -120,7 +117,7 @@ void main() async {
 
   // Log messages that will be aggregated
   for (var i = 0; i < 10; i++) {
-    aggregatingLogger.info('Message $i', Context({'index': i}));
+    aggregatingLogger.info('Message $i', {'index': i});
   }
 
   // Create logger with custom filtering driver
