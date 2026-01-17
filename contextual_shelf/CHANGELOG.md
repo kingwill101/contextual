@@ -1,3 +1,8 @@
+## [0.4.0] - 2026-01-17
+- Update logging format to use logfmt
+- Remove obsolete log files
+- Fix stack trace serialization in JSON output
+
 ## [0.3.0] - 2026-01-07
 - Bump contextual version to 2.1.0
 

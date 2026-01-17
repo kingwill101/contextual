@@ -872,6 +872,15 @@ class Logger extends AbstractLogger {
     _targetChannels = null;
   }
 
+  /// Normalizes the optional [context] argument into a [Context] instance.
+  ///
+  /// The supported inputs are:
+  /// - `null`: returns an empty [Context].
+  /// - [Context]: returns the instance unchanged.
+  /// - `Map<String, dynamic>`: passed directly to [Context.from].
+  /// - generic [Map]: keys are converted to strings and values kept as-is
+  ///   before being passed to [Context.from].
+  /// - any other object: wrapped in a [Context] under the `'context'` key.
   Context _resolveContext(Object? context) {
     if (context == null) {
       return Context();

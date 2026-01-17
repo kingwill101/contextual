@@ -53,11 +53,11 @@ class LogRecord {
       'message': message,
       'context': context.all(),
     };
-    
+
     if (stackTraceProvided && stackTrace != null) {
       map['stackTrace'] = stackTrace.toString();
     }
-    
+
     return map;
   }
 }
