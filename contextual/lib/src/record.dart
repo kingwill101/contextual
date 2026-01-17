@@ -19,6 +19,9 @@ class LogRecord {
   /// The program counter or stack trace at the time the record was constructed.
   final StackTrace? stackTrace;
 
+  /// Whether the stack trace was explicitly provided by the caller.
+  final bool stackTraceProvided;
+
   /// Creates a new [LogRecord] instance with the given parameters.
   LogRecord({
     required this.time,
@@ -26,6 +29,7 @@ class LogRecord {
     required this.message,
     Context? context,
     this.stackTrace,
+    this.stackTraceProvided = false,
   }) : context = context ?? Context();
 
   /// Returns a copy of the record with no shared state.
@@ -36,6 +40,7 @@ class LogRecord {
       message: message,
       context: Context.from(context.all()),
       stackTrace: stackTrace,
+      stackTraceProvided: stackTraceProvided,
     );
   }
 

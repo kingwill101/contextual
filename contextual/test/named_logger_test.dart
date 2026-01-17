@@ -232,6 +232,27 @@ void main() {
       expect(capturedEntry, isNotNull);
       expect(capturedEntry!.record.context.all()['logger'], equals('root'));
     });
+
+    test('provided stack trace is preserved', () async {
+      final logger = Logger(name: 'test.stack');
+      logger.addChannel('console', ConsoleLogDriver());
+
+      LogEntry? capturedEntry;
+      logger.onRecord.listen((entry) {
+        capturedEntry = entry;
+      });
+
+      final trace = StackTrace.current;
+      logger.error('test message', {'requestId': 'abc'}, trace);
+
+      await Future.delayed(Duration.zero); // Allow async processing
+
+      expect(capturedEntry, isNotNull);
+      expect(
+        capturedEntry!.record.stackTrace.toString(),
+        equals(trace.toString()),
+      );
+    });
   });
 
   group('Logger Registry', () {

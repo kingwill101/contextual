@@ -39,10 +39,10 @@ void main() async {
 
   // Database logger - name appears as 'app.database' in context
   database.warning('Database connection pool low');
-  database.error(
-    'Failed to execute query',
-    Context({'query': 'SELECT * FROM users', 'error': 'timeout'}),
-  );
+  database.error('Failed to execute query', {
+    'query': 'SELECT * FROM users',
+    'error': 'timeout',
+  });
   // Context will include: {logger: 'app.database', 'query': '...', 'error': '...'}
 
   // API logger - inherits level from app, name appears as 'app.api'

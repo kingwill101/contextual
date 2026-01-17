@@ -45,7 +45,7 @@ void main() async {
     app.info('Initializing components');
     app.debug('This debug message won\'t show due to level filtering');
     database.warning('Database connection slow');
-    database.error('Query timeout', Context({'query': 'SELECT * FROM users'}));
+    database.error('Query timeout', {'query': 'SELECT * FROM users'});
 
     // Wait for async logging to complete
     await Future.delayed(Duration(milliseconds: 100));

@@ -1,6 +1,6 @@
 import 'package:contextual/contextual.dart';
 
-/// This example demonstrates console logging with pretty formatting and colors.
+/// This example demonstrates console logging with logfmt-style output and colors.
 void main() async {
   final logger = await Logger.create(
     formatter: PrettyLogFormatter(),
@@ -16,7 +16,7 @@ void main() async {
     logger.error('Error message in red - for error conditions');
     logger.critical('Critical message in bold red - for critical failures');
 
-    // Add context to show structured data with color-coded output
+    // Add context to show structured data
     logger
         .withContext({
           'requestId': '123abc',
@@ -29,14 +29,9 @@ void main() async {
     try {
       throw Exception('Database connection failed');
     } catch (e, stack) {
-      logger
-          .withContext({
-            'error': e.toString(),
-            'stackTrace': stack.toString().split(
-              '\n',
-            )[0], // First line of stack trace
-          })
-          .error('Error occurred during database operation');
+      logger.error('Error occurred during database operation', {
+        'error': e.toString(),
+      }, stack);
     }
   } finally {
     // While not strictly necessary for console-only logging,

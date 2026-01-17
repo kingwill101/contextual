@@ -52,8 +52,8 @@
 ///   logger.info('Server started');
 ///
 ///   // With additional context
-///   logger.error('Database error',
-///     Context({'code': 500, 'db': 'users'}));
+///   logger.error('Database error', {'code': 500, 'db': 'users'});
+///   logger.error('Request failed', {'requestId': 'abc'}, StackTrace.current);
 ///
 ///   // Type-specific formatting
 ///   logger.debug(MyCustomObject());  // Uses registered formatter

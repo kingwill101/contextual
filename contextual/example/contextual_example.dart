@@ -63,7 +63,21 @@ class StructuredMapFormatter extends LogTypeFormatter<Map<String, dynamic>> {
 class ExceptionLogFormatter extends LogTypeFormatter<Exception> {
   @override
   String format(Level level, Exception exception, Context context) {
-    return '[${level.toUpperCase()}] Exception: ${exception.toString()} at ${DateTime.now()} | Context: ${context.all()}';
+    final timestamp = DateTime.now().toIso8601String();
+    final parts = <String>[
+      'time="$timestamp"',
+      'level=${level.name}',
+      'msg="${exception.toString().replaceAll('"', '\\"')}"',
+    ];
+    
+    // Add context data
+    final contextData = context.all();
+    for (final entry in contextData.entries) {
+      final value = entry.value.toString().replaceAll('"', '\\"');
+      parts.add('${entry.key}="$value"');
+    }
+    
+    return parts.join(' ');
   }
 }
 

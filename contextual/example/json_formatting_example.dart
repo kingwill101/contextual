@@ -34,12 +34,15 @@ void main() async {
   try {
     throw Exception('Payment validation failed');
   } catch (e, stack) {
-    logger.error({
-      'error': e.toString(),
-      'stackTrace': stack.toString(),
-      'component': 'payment_processor',
-      'severity': 'high',
-    });
+    logger.error(
+      {
+        'error': e.toString(),
+        'component': 'payment_processor',
+        'severity': 'high',
+      },
+      null,
+      stack,
+    );
   }
 
   // Multiple context layers
