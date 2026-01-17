@@ -45,13 +45,19 @@ class LogRecord {
   }
 
   /// Converts the log record to a JSON-compatible map.
+  /// Only includes stackTrace if it was explicitly provided by the caller.
   Map<String, dynamic> toJson() {
-    return {
+    final map = {
       'time': time.toIso8601String(),
       'level': level.name,
       'message': message,
       'context': context.all(),
-      'stackTrace': stackTrace?.toString(),
     };
+    
+    if (stackTraceProvided && stackTrace != null) {
+      map['stackTrace'] = stackTrace.toString();
+    }
+    
+    return map;
   }
 }
